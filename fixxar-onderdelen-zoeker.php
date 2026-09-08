@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Fixxar Onderdelen Zoeker
  * Description: Zoekfunctie waarmee bezoekers stofzuigerzakken en inkt kunnen vinden op basis van het modelnummer van hun apparaat. Gebruik shortcode [fixxar_onderdelen_zoeker].
- * Version: 1.0.1
+ * Version: 1.0.2
  * Author: Fixxar Nederland
  * Text Domain: fixxar-zoeker
  */

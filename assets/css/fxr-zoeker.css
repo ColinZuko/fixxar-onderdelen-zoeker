@@ -51,7 +51,7 @@
 
 .fxr-zoeker__input:focus {
   outline: none;
-  border-color: #888;
+  border-color: #95c11e;
 }
 
 .fxr-zoeker__status {
@@ -69,7 +69,7 @@
 .fxr-zoeker__loader {
   --fxr-loader-size: 28px;
   --fxr-orbe-size: 6px;
-  --fxr-orbe-color: #3ae374;
+  --fxr-orbe-color: #95c11e;
   display: inline-block;
   width: var(--fxr-loader-size);
   height: var(--fxr-loader-size);
