@@ -41,34 +41,109 @@
 		container.innerHTML = html;
 	}
 
+	function setOptions( select, items, placeholder ) {
+		var html = '<option value="">' + escapeHtml( placeholder ) + '</option>';
+		items.forEach( function ( item ) {
+			html += '<option value="' + item.id + '">' + escapeHtml( item.name ) + '</option>';
+		} );
+		select.innerHTML = html;
+	}
+
 	document.addEventListener( 'DOMContentLoaded', function () {
 		var wrappers = document.querySelectorAll( '.fxr-zoeker' );
 
 		wrappers.forEach( function ( wrapper ) {
-			var input = wrapper.querySelector( '.fxr-zoeker__input' );
+			var taxonomy = wrapper.getAttribute( 'data-taxonomy' );
+			var minChars = parseInt( wrapper.getAttribute( 'data-min-chars' ), 10 ) || 1;
+
+			var merkSelect = wrapper.querySelector( '.fxr-zoeker__select--merk' );
+			var serieSelect = wrapper.querySelector( '.fxr-zoeker__select--serie' );
+			var nummerInput = wrapper.querySelector( '.fxr-zoeker__input--nummer' );
 			var loader = wrapper.querySelector( '.fxr-zoeker__loader' );
 			var statusText = wrapper.querySelector( '.fxr-zoeker__status-text' );
 			var results = wrapper.querySelector( '.fxr-zoeker__results' );
-			var minChars = parseInt( wrapper.getAttribute( 'data-min-chars' ), 10 ) || 2;
 
-			var doSearch = debounce( function () {
-				var term = input.value.trim();
+			function resetResults() {
+				loader.hidden = true;
+				statusText.textContent = '';
+				results.innerHTML = '';
+			}
 
-				if ( term.length < minChars ) {
-					loader.hidden = true;
-					statusText.textContent = '';
-					results.innerHTML = '';
+			function resetSerieAndNummer() {
+				serieSelect.disabled = true;
+				setOptions( serieSelect, [], 'Kies eerst een merk...' );
+				nummerInput.disabled = true;
+				nummerInput.value = '';
+				resetResults();
+			}
+
+			// Stap 1: Merk gekozen -> series ophalen.
+			merkSelect.addEventListener( 'change', function () {
+				var merkId = merkSelect.value;
+				resetSerieAndNummer();
+
+				if ( ! merkId ) {
 					return;
 				}
 
-				// Loader-animatie i.p.v. "Zoeken..."-tekst, terwijl het verzoek loopt.
+				setOptions( serieSelect, [], 'Laden...' );
+
+				var body = new URLSearchParams();
+				body.append( 'action', 'fxr_get_series' );
+				body.append( 'nonce', fxrZoeker.nonce );
+				body.append( 'taxonomy', taxonomy );
+				body.append( 'merk_id', merkId );
+
+				fetch( fxrZoeker.ajaxUrl, {
+					method: 'POST',
+					credentials: 'same-origin',
+					body: body,
+				} )
+					.then( function ( res ) {
+						return res.json();
+					} )
+					.then( function ( json ) {
+						if ( ! json.success || ! json.data.series.length ) {
+							setOptions( serieSelect, [], 'Geen series gevonden' );
+							return;
+						}
+						setOptions( serieSelect, json.data.series, 'Kies een serie...' );
+						serieSelect.disabled = false;
+					} )
+					.catch( function () {
+						setOptions( serieSelect, [], 'Er ging iets mis' );
+					} );
+			} );
+
+			// Stap 2: Serie gekozen -> nummerveld vrijgeven.
+			serieSelect.addEventListener( 'change', function () {
+				nummerInput.value = '';
+				resetResults();
+				nummerInput.disabled = ! serieSelect.value;
+				if ( ! nummerInput.disabled ) {
+					nummerInput.focus();
+				}
+			} );
+
+			// Stap 3: Nummer typen -> zoeken binnen gekozen merk + serie.
+			var doSearch = debounce( function () {
+				var serieId = serieSelect.value;
+				var nummer = nummerInput.value.trim();
+
+				if ( ! serieId || nummer.length < minChars ) {
+					resetResults();
+					return;
+				}
+
 				loader.hidden = false;
 				statusText.textContent = '';
 
 				var body = new URLSearchParams();
 				body.append( 'action', 'fxr_zoek_onderdelen' );
 				body.append( 'nonce', fxrZoeker.nonce );
-				body.append( 'term', term );
+				body.append( 'taxonomy', taxonomy );
+				body.append( 'serie_id', serieId );
+				body.append( 'nummer', nummer );
 
 				fetch( fxrZoeker.ajaxUrl, {
 					method: 'POST',
@@ -97,7 +172,7 @@
 					} );
 			}, 350 );
 
-			input.addEventListener( 'input', doSearch );
+			nummerInput.addEventListener( 'input', doSearch );
 		} );
 	} );
 } )();

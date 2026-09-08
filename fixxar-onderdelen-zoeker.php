@@ -1,96 +1,112 @@
 <?php
 /**
  * Plugin Name: Fixxar Onderdelen Zoeker
- * Description: Zoekfunctie waarmee bezoekers stofzuigerzakken en inkt kunnen vinden op basis van het modelnummer van hun apparaat. Gebruik shortcode [fixxar_onderdelen_zoeker].
- * Version: 1.0.2
- * Author: Fixxar Nederland
+ * Description: Twee zoeksystemen (inkt en stofzuigeronderdelen) waarmee bezoekers via merk > serie > nummer het juiste onderdeel vinden. Shortcodes: [fixxar_inkt_zoeker] en [fixxar_stofzuiger_zoeker].
+ * Version: 2.0.0
+ * Author: Fixxar
  * Text Domain: fixxar-zoeker
  */
-
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Direct toegang niet toegestaan.
 }
 
-// 1. Laad de update-checker library
-require_once plugin_dir_path(__FILE__) . 'plugin-update-checker/plugin-update-checker.php';
+// Automatische updates via GitHub (Plugin Update Checker).
+// Zodra je vanaf hier een nieuwe versie naar GitHub pusht (met een hogere
+// "Version:" hierboven + een git tag/release), verschijnt in wp-admin bij
+// Plugins automatisch een update-melding, net als bij een plugin uit de
+// officiële WordPress-store.
+require_once plugin_dir_path( __FILE__ ) . 'plugin-update-checker/plugin-update-checker.php';
 
 use YahnisElsts\PluginUpdateChecker\v5\PucFactory;
 
-// 2. Koppel aan je GitHub repository
-$myUpdateChecker = PucFactory::buildUpdateChecker(
-    'https://github.com/ColinZuko/fixxar-onderdelen-zoeker', // URL naar je GitHub repo
-    __FILE__,
-    'fixxar-onderdelen-zoeker' // De slug van je plugin (mapnaam)
+$fxr_update_checker = PucFactory::buildUpdateChecker(
+	'https://github.com/ColinZuko/fixxar-onderdelen-zoeker',
+	__FILE__,
+	'fixxar-onderdelen-zoeker'
 );
+$fxr_update_checker->getVcsApi()->enableReleaseAssets();
 
-// 3. Zorg dat updates via officiële GitHub "Releases" worden opgehaald
-$myUpdateChecker->getVcsApi()->enableReleaseAssets();
-
-
-define( 'FXR_ZOEKER_VERSION', '1.0.1' );
+define( 'FXR_ZOEKER_VERSION', '2.0.0' );
 define( 'FXR_ZOEKER_PATH', plugin_dir_path( __FILE__ ) );
 define( 'FXR_ZOEKER_URL', plugin_dir_url( __FILE__ ) );
 
 /**
- * Stap 1: Custom taxonomy "Compatibele modellen" op producten.
- * Hiermee koppel je aan elk product (stofzuigerzak, inkt) een of meerdere
- * modelnummers van apparaten waar het bij past. Werkt als een "tags"-veld
- * op het productbewerkscherm: snel meerdere modellen intypen per product.
+ * De twee taxonomieën, allebei hiërarchisch (zoals Categorieën):
+ * Merk (top-niveau) > Serie (kind van Merk) > Model/nummer (kind van Serie).
+ *
+ * In wp-admin werkt dit hetzelfde als Categorieën aanmaken: eerst "HP" (geen
+ * bovenliggende), dan "Deskjet" (bovenliggende: HP), dan "2720" (bovenliggende:
+ * Deskjet) — en dat laatste (het specifieke model) vink je aan bij het product.
  */
-add_action( 'init', 'fxr_register_model_taxonomy' );
-function fxr_register_model_taxonomy() {
-	$labels = array(
-		'name'                       => 'Compatibele modellen',
-		'singular_name'              => 'Compatibel model',
-		'search_items'               => 'Zoek modellen',
-		'popular_items'              => 'Populaire modellen',
-		'all_items'                  => 'Alle modellen',
-		'edit_item'                  => 'Model bewerken',
-		'update_item'                => 'Model bijwerken',
-		'add_new_item'               => 'Nieuw model toevoegen',
-		'new_item_name'              => 'Naam nieuw model (bv. Dyson V8)',
-		'separate_items_with_commas' => "Scheid modellen met komma's",
-		'add_or_remove_items'        => 'Modellen toevoegen of verwijderen',
-		'choose_from_most_used'      => 'Kies uit meest gebruikte modellen',
-		'menu_name'                  => 'Compatibele modellen',
-		'not_found'                  => 'Geen modellen gevonden',
+add_action( 'init', 'fxr_register_taxonomies' );
+function fxr_register_taxonomies() {
+	$configs = array(
+		'fxr_inkt_model'       => array(
+			'name'      => 'Inkt: merk / serie / model',
+			'menu_name' => 'Inkt-compatibiliteit',
+			'slug'      => 'inkt-model',
+		),
+		'fxr_stofzuiger_model' => array(
+			'name'      => 'Stofzuigers: merk / serie / model',
+			'menu_name' => 'Stofzuiger-compatibiliteit',
+			'slug'      => 'stofzuiger-model',
+		),
 	);
 
-	register_taxonomy(
-		'compatibel_model',
-		array( 'product' ),
-		array(
-			'hierarchical'      => false, // Tag-stijl: snel meerdere modelnummers per product invoeren.
-			'labels'            => $labels,
-			'show_ui'           => true,
-			// Uit gezet: bij veel gekoppelde modellen maakt deze kolom de
-			// productenlijst in wp-admin te lang/onoverzichtelijk. Zet op
-			// true als je de kolom toch weer wilt zien.
-			'show_admin_column' => false,
-			'show_in_quick_edit' => true,
-			'query_var'         => true,
-			'rewrite'           => array( 'slug' => 'compatibel-model' ),
-			'show_in_rest'      => true,
-		)
-	);
+	foreach ( $configs as $taxonomy => $cfg ) {
+		register_taxonomy(
+			$taxonomy,
+			array( 'product' ),
+			array(
+				'hierarchical'       => true, // Werkt als Categorieën: Merk > Serie > Model.
+				'labels'             => array(
+					'name'          => $cfg['name'],
+					'singular_name' => 'Model',
+					'menu_name'     => $cfg['menu_name'],
+					'all_items'     => 'Alle ' . strtolower( $cfg['menu_name'] ),
+					'edit_item'     => 'Bewerken',
+					'add_new_item'  => 'Nieuwe toevoegen (Merk, Serie of Model)',
+					'parent_item'   => 'Bovenliggend (Merk of Serie)',
+					'search_items'  => 'Zoeken',
+					'not_found'     => 'Niets gevonden',
+				),
+				'show_ui'           => true,
+				// Uit gezet: bij veel gekoppelde modellen maakt deze kolom de
+				// productenlijst in wp-admin te lang. Zet op true om 'm terug te zien.
+				'show_admin_column' => false,
+				'query_var'         => true,
+				'rewrite'           => array( 'slug' => $cfg['slug'] ),
+				'show_in_rest'      => true,
+			)
+		);
+	}
 }
 
 /**
- * Stap 2: Shortcode [fixxar_onderdelen_zoeker] die het zoekveld + resultaten toont.
- * Plaats deze shortcode op een pagina (ook via UX Builder in Flatsome: voeg een
- * "Text/HTML" of shortcode-element toe en plak [fixxar_onderdelen_zoeker]).
+ * Shortcodes: [fixxar_inkt_zoeker] en [fixxar_stofzuiger_zoeker].
+ * Allebei tonen ze dezelfde opbouw (Merk-dropdown > Serie-dropdown > nummer-
+ * invoerveld), maar praten tegen hun eigen taxonomie zodat een klant die "HP"
+ * kiest bij inkt nooit stofzuigerzakken te zien krijgt en andersom.
  */
-add_shortcode( 'fixxar_onderdelen_zoeker', 'fxr_render_zoeker_shortcode' );
-function fxr_render_zoeker_shortcode( $atts ) {
+add_shortcode( 'fixxar_inkt_zoeker', 'fxr_render_inkt_shortcode' );
+function fxr_render_inkt_shortcode( $atts ) {
+	return fxr_render_zoeker_shortcode( $atts, 'fxr_inkt_model', 'Zoek je inkt' );
+}
+
+add_shortcode( 'fixxar_stofzuiger_zoeker', 'fxr_render_stofzuiger_shortcode' );
+function fxr_render_stofzuiger_shortcode( $atts ) {
+	return fxr_render_zoeker_shortcode( $atts, 'fxr_stofzuiger_model', 'Zoek je stofzuigeronderdeel' );
+}
+
+function fxr_render_zoeker_shortcode( $atts, $taxonomy, $default_title ) {
 	$atts = shortcode_atts(
 		array(
-			'title'       => 'Zoek je onderdeel',
-			'placeholder' => 'Typ het modelnummer van je apparaat...',
-			'min_chars'   => 2,
+			'title'     => $default_title,
+			'min_chars' => 1,
 		),
 		$atts,
-		'fixxar_onderdelen_zoeker'
+		'fixxar_zoeker'
 	);
 
 	wp_enqueue_style( 'fxr-zoeker', FXR_ZOEKER_URL . 'assets/css/fxr-zoeker.css', array(), FXR_ZOEKER_VERSION );
@@ -99,41 +115,67 @@ function fxr_render_zoeker_shortcode( $atts ) {
 		'fxr-zoeker',
 		'fxrZoeker',
 		array(
-			'ajaxUrl'  => admin_url( 'admin-ajax.php' ),
-			'nonce'    => wp_create_nonce( 'fxr_zoeker_nonce' ),
-			'minChars' => (int) $atts['min_chars'],
+			'ajaxUrl' => admin_url( 'admin-ajax.php' ),
+			'nonce'   => wp_create_nonce( 'fxr_zoeker_nonce' ),
 		)
 	);
 
+	// Merk-dropdown vast server-side vullen (top-niveau termen van deze taxonomie).
+	$merken = get_terms(
+		array(
+			'taxonomy'   => $taxonomy,
+			'parent'     => 0,
+			'hide_empty' => false,
+			'orderby'    => 'name',
+		)
+	);
+	if ( is_wp_error( $merken ) ) {
+		$merken = array();
+	}
+
 	ob_start();
 	?>
-	<div class="fxr-zoeker" data-min-chars="<?php echo esc_attr( $atts['min_chars'] ); ?>">
+	<div class="fxr-zoeker" data-taxonomy="<?php echo esc_attr( $taxonomy ); ?>" data-min-chars="<?php echo esc_attr( $atts['min_chars'] ); ?>">
 		<?php if ( ! empty( $atts['title'] ) ) : ?>
-			<!-- Gewone <h2>: krijgt automatisch de kopstijl van je thema, geen
-			     eigen lettergrootte/kleur nodig in fxr-zoeker.css. Wil je geen
-			     titel, geef dan title="" mee aan de shortcode. -->
-				 <label class="fxr-zoeker__eyebrow">PRODUCTZOEKER</label>
-			<h2 class="fxr-zoeker__title">Inktcartidge of stofzuigeronderdeel zoeken</h2>
+			<!-- Gewone <h2>: krijgt automatisch de kopstijl van je thema. -->
+			<h2 class="fxr-zoeker__title"><?php echo esc_html( $atts['title'] ); ?></h2>
 		<?php endif; ?>
-		<div class="fxr-zoeker__form">
-			<p class="fxr-zoeker__description">Vind gemakkelijk het juist stofzuigeronderdeel of de juiste inktcartridge voor jouw apparaat</p>
-			<input
-				type="text"
-				id="fxr-zoeker-input"
-				class="fxr-zoeker__input"
-				placeholder="Vul hier het typenummer van je apparaat in..."
-				autocomplete="off"
-			/>
+
+		<div class="fxr-zoeker__row">
+			<div class="fxr-zoeker__field">
+				<label for="fxr-merk-<?php echo esc_attr( $taxonomy ); ?>" class="fxr-zoeker__label">Merk</label>
+				<select id="fxr-merk-<?php echo esc_attr( $taxonomy ); ?>" class="fxr-zoeker__select fxr-zoeker__select--merk">
+					<option value="">Kies een merk...</option>
+					<?php foreach ( $merken as $merk ) : ?>
+						<option value="<?php echo esc_attr( $merk->term_id ); ?>"><?php echo esc_html( $merk->name ); ?></option>
+					<?php endforeach; ?>
+				</select>
+			</div>
+
+			<div class="fxr-zoeker__field">
+				<label for="fxr-serie-<?php echo esc_attr( $taxonomy ); ?>" class="fxr-zoeker__label">Serie</label>
+				<select id="fxr-serie-<?php echo esc_attr( $taxonomy ); ?>" class="fxr-zoeker__select fxr-zoeker__select--serie" disabled>
+					<option value="">Kies eerst een merk...</option>
+				</select>
+			</div>
+
+			<div class="fxr-zoeker__field">
+				<label for="fxr-nummer-<?php echo esc_attr( $taxonomy ); ?>" class="fxr-zoeker__label">Modelnummer</label>
+				<input
+					type="text"
+					id="fxr-nummer-<?php echo esc_attr( $taxonomy ); ?>"
+					class="fxr-zoeker__input fxr-zoeker__input--nummer"
+					placeholder="Bijv. 2720"
+					autocomplete="off"
+					disabled
+				/>
+			</div>
 		</div>
+
 		<div class="fxr-zoeker__status" aria-live="polite">
-			<!-- Loader-animatie tijdens het zoeken, i.p.v. platte "Zoeken..."-tekst.
-			     Ontwerp: https://uiverse.io/krlozCJ/horrible-fish-14 (MIT-licentie). -->
+			<!-- Draaiend Fixxar-tandwiel tijdens het zoeken. -->
 			<span class="fxr-zoeker__loader" hidden>
-				<span class="fxr-zoeker__orbe" style="--index:0"></span>
-				<span class="fxr-zoeker__orbe" style="--index:1"></span>
-				<span class="fxr-zoeker__orbe" style="--index:2"></span>
-				<span class="fxr-zoeker__orbe" style="--index:3"></span>
-				<span class="fxr-zoeker__orbe" style="--index:4"></span>
+				<?php echo file_get_contents( FXR_ZOEKER_PATH . 'assets/img/fxr-loader-icon.svg' ); // phpcs:ignore ?>
 			</span>
 			<span class="fxr-zoeker__status-text"></span>
 		</div>
@@ -144,21 +186,59 @@ function fxr_render_zoeker_shortcode( $atts ) {
 }
 
 /**
- * Stap 3: AJAX-handler die producten opzoekt op basis van het getypte modelnummer.
- * Zoekt in:
- *  - de taxonomie "compatibel_model" (het modelnummer dat jij aan een product hangt)
- *  - de SKU van het product (voor het geval het modelnummer ook als SKU is ingevoerd)
- * Werkt voor ingelogde bezoekers EN gewone websitebezoekers (nopriv).
+ * AJAX: geef de Serie-opties (kind-termen) terug voor een gekozen Merk.
+ */
+add_action( 'wp_ajax_fxr_get_series', 'fxr_ajax_get_series' );
+add_action( 'wp_ajax_nopriv_fxr_get_series', 'fxr_ajax_get_series' );
+function fxr_ajax_get_series() {
+	check_ajax_referer( 'fxr_zoeker_nonce', 'nonce' );
+
+	$taxonomy = fxr_valid_taxonomy( isset( $_POST['taxonomy'] ) ? sanitize_key( wp_unslash( $_POST['taxonomy'] ) ) : '' );
+	$merk_id  = isset( $_POST['merk_id'] ) ? absint( $_POST['merk_id'] ) : 0;
+
+	if ( ! $taxonomy || ! $merk_id ) {
+		wp_send_json_error( array( 'message' => 'Ongeldig verzoek.' ) );
+	}
+
+	$series = get_terms(
+		array(
+			'taxonomy'   => $taxonomy,
+			'parent'     => $merk_id,
+			'hide_empty' => false,
+			'orderby'    => 'name',
+		)
+	);
+	if ( is_wp_error( $series ) ) {
+		$series = array();
+	}
+
+	$data = array();
+	foreach ( $series as $serie ) {
+		$data[] = array(
+			'id'   => $serie->term_id,
+			'name' => $serie->name,
+		);
+	}
+
+	wp_send_json_success( array( 'series' => $data ) );
+}
+
+/**
+ * AJAX: zoek producten op basis van gekozen Serie + getypt modelnummer.
+ * Zoekt alleen tussen de Model-termen die kind zijn van de gekozen Serie,
+ * zodat resultaten altijd binnen het gekozen merk + serie blijven.
  */
 add_action( 'wp_ajax_fxr_zoek_onderdelen', 'fxr_ajax_zoek_onderdelen' );
 add_action( 'wp_ajax_nopriv_fxr_zoek_onderdelen', 'fxr_ajax_zoek_onderdelen' );
 function fxr_ajax_zoek_onderdelen() {
 	check_ajax_referer( 'fxr_zoeker_nonce', 'nonce' );
 
-	$term = isset( $_POST['term'] ) ? sanitize_text_field( wp_unslash( $_POST['term'] ) ) : '';
-	$term = trim( $term );
+	$taxonomy = fxr_valid_taxonomy( isset( $_POST['taxonomy'] ) ? sanitize_key( wp_unslash( $_POST['taxonomy'] ) ) : '' );
+	$serie_id = isset( $_POST['serie_id'] ) ? absint( $_POST['serie_id'] ) : 0;
+	$nummer   = isset( $_POST['nummer'] ) ? sanitize_text_field( wp_unslash( $_POST['nummer'] ) ) : '';
+	$nummer   = trim( $nummer );
 
-	if ( mb_strlen( $term ) < 2 ) {
+	if ( ! $taxonomy || ! $serie_id || '' === $nummer ) {
 		wp_send_json_success(
 			array(
 				'products' => array(),
@@ -167,57 +247,46 @@ function fxr_ajax_zoek_onderdelen() {
 		);
 	}
 
-	global $wpdb;
-
-	// 1) Matchende modelnummers (taxonomie-termen) zoeken op naam.
-	$matching_terms = get_terms(
+	// Model-termen (kinderen van de gekozen serie) die het getypte nummer bevatten.
+	$model_terms = get_terms(
 		array(
-			'taxonomy'   => 'compatibel_model',
+			'taxonomy'   => $taxonomy,
+			'parent'     => $serie_id,
 			'hide_empty' => false,
-			'name__like' => $term,
+			'name__like' => $nummer,
 			'fields'     => 'ids',
 		)
 	);
-	if ( is_wp_error( $matching_terms ) ) {
-		$matching_terms = array();
-	}
-
-	$product_ids = array();
-
-	if ( ! empty( $matching_terms ) ) {
-		$tax_product_ids = get_posts(
+	if ( is_wp_error( $model_terms ) || empty( $model_terms ) ) {
+		wp_send_json_success(
 			array(
-				'post_type'      => 'product',
-				'post_status'    => 'publish',
-				'posts_per_page' => 50,
-				'fields'         => 'ids',
-				'tax_query'      => array( // phpcs:ignore WordPress.DB.SlowDBQuery
-					array(
-						'taxonomy' => 'compatibel_model',
-						'field'    => 'term_id',
-						'terms'    => $matching_terms,
-					),
-				),
+				'products' => array(),
+				'message'  => 'Geen onderdelen gevonden voor "' . esc_html( $nummer ) . '".',
 			)
 		);
-		$product_ids      = array_merge( $product_ids, $tax_product_ids );
 	}
 
-	// 2) Ook zoeken op SKU (voor het geval het modelnummer als SKU staat ingevoerd).
-	$sku_matches = $wpdb->get_col(
-		$wpdb->prepare(
-			"SELECT post_id FROM {$wpdb->postmeta} WHERE meta_key = '_sku' AND meta_value LIKE %s LIMIT 50",
-			'%' . $wpdb->esc_like( $term ) . '%'
+	$product_ids = get_posts(
+		array(
+			'post_type'      => 'product',
+			'post_status'    => 'publish',
+			'posts_per_page' => 50,
+			'fields'         => 'ids',
+			'tax_query'      => array( // phpcs:ignore WordPress.DB.SlowDBQuery
+				array(
+					'taxonomy' => $taxonomy,
+					'field'    => 'term_id',
+					'terms'    => $model_terms,
+				),
+			),
 		)
 	);
-	$product_ids = array_merge( $product_ids, $sku_matches );
-	$product_ids = array_unique( array_map( 'intval', $product_ids ) );
 
 	if ( empty( $product_ids ) ) {
 		wp_send_json_success(
 			array(
 				'products' => array(),
-				'message'  => 'Geen onderdelen gevonden voor "' . esc_html( $term ) . '".',
+				'message'  => 'Geen onderdelen gevonden voor "' . esc_html( $nummer ) . '".',
 			)
 		);
 	}
@@ -244,7 +313,16 @@ function fxr_ajax_zoek_onderdelen() {
 	wp_send_json_success(
 		array(
 			'products' => $products_data,
-			'message'  => empty( $products_data ) ? 'Geen onderdelen gevonden voor "' . esc_html( $term ) . '".' : '',
+			'message'  => empty( $products_data ) ? 'Geen onderdelen gevonden voor "' . esc_html( $nummer ) . '".' : '',
 		)
 	);
+}
+
+/**
+ * Helper: alleen deze twee taxonomieën zijn geldig voor de AJAX-endpoints
+ * (voorkomt dat iemand een willekeurige taxonomie kan opvragen).
+ */
+function fxr_valid_taxonomy( $taxonomy ) {
+	$allowed = array( 'fxr_inkt_model', 'fxr_stofzuiger_model' );
+	return in_array( $taxonomy, $allowed, true ) ? $taxonomy : false;
 }

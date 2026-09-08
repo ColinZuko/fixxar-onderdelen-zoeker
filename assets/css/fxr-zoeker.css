@@ -1,214 +1,153 @@
 /* Fixxar Onderdelen Zoeker — basisstijl, pas gerust aan op je eigen huisstijl */
 
 .fxr-zoeker {
-  /* Geen eigen max-width: de zoeker vult gewoon de volledige breedte
+	/* Geen eigen max-width: de zoeker vult gewoon de volledige breedte
 	   van de kolom/sectie waarin je hem via UX Builder plaatst, net als
 	   ieder ander Flatsome-element (tekst, afbeelding, etc.). */
-  width: 100%;
-  box-sizing: border-box;
-  margin: 0 0 2rem;
-  border: 1px solid #8c8686;
-  border-radius: 8px;
-  padding: 1.5rem;
+	width: 100%;
+	box-sizing: border-box;
+	margin: 0 0 2rem;
 }
 
 .fxr-zoeker__title {
-  /* Bewust geen font-size/font-weight/color hier: dit is een echte <h2>,
+	/* Bewust geen font-size/font-weight/color hier: dit is een echte <h2>,
 	   die krijgt automatisch de kopstijl die je thema al gebruikt voor
 	   h2's, en volgt mee als je die stijl later in Flatsome aanpast. */
-  margin: 0 0 0.5rem;
+	margin: 0 0 1rem;
 }
 
-.fxr-zoeker__eyebrow {
-  display: block;
-  margin-bottom: 0.4rem;
-  font-weight: bold;
-  font-size: 0.65rem;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  color: #95c11e;
+/* Merk / Serie / Nummer naast elkaar; wrapt naar onder elkaar op smalle schermen. */
+.fxr-zoeker__row {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 1rem;
 }
-.fxr-zoeker__description {
-  margin: 0 0 2rem;
-  font-size: 0.9rem;
-  color: #666;
-  width: 60%;
+
+.fxr-zoeker__field {
+	flex: 1 1 200px;
+	min-width: 0;
+}
+
+.fxr-zoeker__label {
+	display: block;
+	margin-bottom: 0.4rem;
 }
 
 /* Specifiekere selector (.fxr-zoeker als "voorvoegsel") + !important:
-   Flatsome/WooCommerce hebben zelf ook CSS voor input[type="text"], vaak
-   met hogere specificiteit, die anders border-radius/border overschrijft. */
-.fxr-zoeker .fxr-zoeker__input {
-  width: 100%;
-  box-sizing: border-box;
-  padding: 0.75rem 1rem;
-  font-size: 1rem;
-  -webkit-appearance: none;
-  appearance: none;
-  border: 1px solid #ccc !important;
-  border-radius: 6px !important;
+   Flatsome/WooCommerce hebben zelf ook CSS voor input/select, vaak met
+   hogere specificiteit, die anders border-radius/border overschrijft. */
+.fxr-zoeker .fxr-zoeker__input,
+.fxr-zoeker .fxr-zoeker__select {
+	width: 100%;
+	box-sizing: border-box;
+	padding: 0.75rem 1rem;
+	font-size: 1rem;
+	-webkit-appearance: none;
+	appearance: none;
+	border: 1px solid #ccc !important;
+	border-radius: 6px !important;
+	background-color: #fff;
 }
 
-.fxr-zoeker__input:focus {
-  outline: none;
-  border-color: #95c11e;
+.fxr-zoeker__input:focus,
+.fxr-zoeker__select:focus {
+	outline: none;
+	border-color: #888;
+}
+
+.fxr-zoeker__input:disabled,
+.fxr-zoeker__select:disabled {
+	background-color: #f5f5f5;
+	color: #999;
+	cursor: not-allowed;
 }
 
 .fxr-zoeker__status {
-  margin-top: 0.5rem;
-  font-size: 0.9rem;
-  color: #666;
-  min-height: 1.2em;
-  display: flex;
-  align-items: center;
+	margin-top: 0.5rem;
+	font-size: 0.9rem;
+	color: #666;
+	min-height: 1.2em;
+	display: flex;
+	align-items: center;
 }
 
-/* Loader-animatie i.p.v. "Zoeken..."-tekst.
-   Ontwerp: https://uiverse.io/krlozCJ/horrible-fish-14 (MIT-licentie).
-   Kleur/grootte zijn losse variabelen, pas gerust aan naar je huisstijl. */
+/* Draaiend Fixxar-tandwiel i.p.v. "Zoeken..."-tekst tijdens het zoeken.
+   --fxr-icon-color: teruggevonden in je eigen (oudere) plugin-CSS, waar deze
+   tint op meerdere plekken (focus-rand, eyebrow-tekst) gebruikt werd — dus
+   vermoedelijk je echte Fixxar-groen. Klopt de tint niet precies, pas 'm
+   hieronder aan; de rest volgt automatisch mee via currentColor. */
 .fxr-zoeker__loader {
-  --fxr-loader-size: 28px;
-  --fxr-orbe-size: 6px;
-  --fxr-orbe-color: #95c11e;
-  display: inline-block;
-  width: var(--fxr-loader-size);
-  height: var(--fxr-loader-size);
-  position: relative;
-  transform: rotate(45deg);
-  margin-right: 0.6rem;
-  flex-shrink: 0;
+	--fxr-loader-size: 30px;
+	--fxr-icon-color: #95c11e;
+	display: inline-flex;
+	width: var(--fxr-loader-size);
+	height: var(--fxr-loader-size);
+	margin-right: 0.6rem;
+	flex-shrink: 0;
+	color: var(--fxr-icon-color);
+	animation: fxr-spin 1.2s linear infinite;
 }
 
 .fxr-zoeker__loader[hidden] {
-  display: none;
+	display: none;
 }
 
-.fxr-zoeker__orbe {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  --delay: calc(var(--index) * 0.1s);
-  animation: fxr-orbit 1.5s ease-in-out var(--delay) infinite;
-  opacity: calc(1 - calc(0.2 * var(--index)));
+.fxr-zoeker__loader svg {
+	width: 100%;
+	height: 100%;
 }
 
-.fxr-zoeker__orbe::after {
-  position: absolute;
-  content: "";
-  top: 0;
-  left: 0;
-  width: var(--fxr-orbe-size);
-  height: var(--fxr-orbe-size);
-  background-color: var(--fxr-orbe-color);
-  box-shadow: 0 0 12px 2px var(--fxr-orbe-color);
-  border-radius: 50%;
-}
+@keyframes fxr-spin {
+	from {
+		transform: rotate(0deg);
+	}
 
-@keyframes fxr-orbit {
-  0% {
-  }
-
-  80% {
-    transform: rotate(360deg);
-  }
-
-  100% {
-    transform: rotate(360deg);
-  }
+	to {
+		transform: rotate(360deg);
+	}
 }
 
 .fxr-zoeker__grid {
-  display: grid;
-  /* Desktop / Default: dynamic scaling up to a strict 5-column maximum */
-  grid-template-columns: repeat(
-    auto-fill,
-    minmax(max(200px, calc((100% - 4rem) / 5)), 1fr)
-  );
-  gap: 1rem;
-  margin-top: 1rem;
-}
-
-/* Tablet / Large Mobile (e.g. iPad, wide phones landscape): target 3 columns */
-@media (max-width: 768px) {
-  .fxr-zoeker__description {
-    width: 100%; /* Prevents text cramping on smaller screens */
-  }
-
-  .fxr-zoeker__grid {
-    /* 3 columns down to around 480px, gap reduced to conserve space */
-    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-    gap: 0.65rem;
-  }
-}
-
-/* Mobile Devices: strict 2 or 3-column fit */
-@media (max-width: 480px) {
-  .fxr-zoeker__grid {
-    /* Guarantees 2 columns on small screens (~320px–400px), 3 columns on ~410px+ */
-    grid-template-columns: repeat(auto-fill, minmax(105px, 1fr));
-    gap: 0.5rem;
-  }
-
-  /* Compact card styling so content fits neatly within narrow columns */
-  .fxr-zoeker__card {
-    padding: 0.5rem;
-    border-radius: 6px;
-  }
-
-  .fxr-zoeker__card-title {
-    font-size: 0.8rem;
-    line-height: 1.25;
-    margin-bottom: 0.35rem;
-    /* Optional: prevents long product titles from breaking layout symmetry */
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-
-  .fxr-zoeker__card-price,
-  .fxr-zoeker__card-stock {
-    font-size: 0.72rem;
-  }
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+	gap: 1rem;
+	margin-top: 1rem;
 }
 
 .fxr-zoeker__card {
-  display: block;
-  width: 100%;
-  text-decoration: none;
-  color: inherit;
-  border: 1px solid #eee;
-  border-radius: 8px;
-  padding: 0.75rem;
-  transition: box-shadow 0.15s ease;
+	display: block;
+	text-decoration: none;
+	color: inherit;
+	border: 1px solid #eee;
+	border-radius: 8px;
+	padding: 0.75rem;
+	transition: box-shadow 0.15s ease;
 }
 
 .fxr-zoeker__card:hover {
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+	box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
 }
 
 .fxr-zoeker__card-img {
-  width: 100%;
-  height: auto;
-  border-radius: 4px;
-  margin-bottom: 0.5rem;
+	width: 100%;
+	height: auto;
+	border-radius: 4px;
+	margin-bottom: 0.5rem;
 }
 
 .fxr-zoeker__card-title {
-  /* Bewust geen font-size/font-weight hier: dit is een <h3>, die volgt
+	/* Bewust geen font-size/font-weight hier: dit is een <h3>, die volgt
 	   automatisch de kopstijl van je thema. */
-  font-size: 1rem;
-  font-weight: 400;
-  margin: 0 0 0.55rem;
+	margin: 0 0 0.25rem;
 }
 
 .fxr-zoeker__card-price {
-  font-size: 0.8rem;
-  color: #1e1e1c;
+	font-size: 0.9rem;
+	color: #333;
 }
 
 .fxr-zoeker__card-stock {
-  font-size: 0.8rem;
-  color: #c0392b;
-  margin-top: 0.25rem;
+	font-size: 0.8rem;
+	color: #c0392b;
+	margin-top: 0.25rem;
 }
