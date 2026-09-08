@@ -19,7 +19,7 @@ use YahnisElsts\PluginUpdateChecker\v5\PucFactory;
 
 // 2. Koppel aan je GitHub repository
 $myUpdateChecker = PucFactory::buildUpdateChecker(
-    'https://github.com/jouw-gebruikersnaam/jouw-repo-naam/', // URL naar je GitHub repo
+    'https://github.com/ColinZuko/fixxar-onderdelen-zoeker.git', // URL naar je GitHub repo
     __FILE__,
     'fixxar-onderdelen-zoeker' // De slug van je plugin (mapnaam)
 );
