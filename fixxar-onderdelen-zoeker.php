@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Fixxar Onderdelen Zoeker
  * Description: Twee zoeksystemen (inkt en stofzuigeronderdelen) waarmee bezoekers het juiste onderdeel vinden. Beide via één zoekveld met autocomplete over alle Merk/Serie/Model-combinaties, dat pas resultaten toont zodra een voorstel is gekozen. Shortcodes: [fixxar_inkt_zoeker] en [fixxar_stofzuiger_zoeker].
- * Version: 2.2.1
+ * Version: 2.3.0
  * Author: Fixxar
  * Text Domain: fixxar-zoeker
  */
@@ -11,7 +11,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Direct toegang niet toegestaan.
 }
 
-define( 'FXR_ZOEKER_VERSION', '2.2.1' );
+define( 'FXR_ZOEKER_VERSION', '2.3.0' );
 define( 'FXR_ZOEKER_PATH', plugin_dir_path( __FILE__ ) );
 define( 'FXR_ZOEKER_URL', plugin_dir_url( __FILE__ ) );
 
@@ -107,7 +107,84 @@ function fxr_render_inkt_shortcode( $atts ) {
 
 add_shortcode( 'fixxar_stofzuiger_zoeker', 'fxr_render_stofzuiger_shortcode' );
 function fxr_render_stofzuiger_shortcode( $atts ) {
-	return fxr_render_zoeker_shortcode( $atts, 'fxr_stofzuiger_model', 'Zoek je stofzuigerzak', 'autocomplete', 'Bijv. Miele, S241i, GD1000...' );
+	return fxr_render_zoeker_shortcode( $atts, 'fxr_stofzuiger_model', 'Zoek je stofzuigeronderdeel', 'autocomplete', 'Bijv. Miele, S241i, GD1000...' );
+}
+
+/**
+ * Shortcode: [fixxar_zoeker] — één zoekbalk met daarboven een knop per
+ * categorie ("Inkt" / "Stofzuigers") om te wisselen. In plaats van twee
+ * losse zoekbalken naast/onder elkaar op de pagina, kies je hiermee eerst
+ * de categorie en zoek je daarna in dat ene veld. Wisselen van categorie
+ * wist het zoekveld en de resultaten, en zoekt daarna in de bijbehorende
+ * taxonomie (zie fxr-zoeker.js).
+ *
+ * Attributen:
+ * - title      : titel boven de zoeker (default "Zoek je onderdeel").
+ * - categorie  : welke knop bij het laden actief is, "inkt" of "stofzuiger"
+ *                (default "inkt").
+ *
+ * De losse shortcodes [fixxar_inkt_zoeker] en [fixxar_stofzuiger_zoeker]
+ * blijven gewoon bestaan en werken — gebruik deze nieuwe shortcode in
+ * plaats daarvan op de plek(ken) waar je nu twee aparte zoekbalken hebt
+ * staan.
+ */
+add_shortcode( 'fixxar_zoeker', 'fxr_render_gecombineerde_shortcode' );
+function fxr_render_gecombineerde_shortcode( $atts ) {
+	$categorie_config = array(
+		'inkt'       => array(
+			'taxonomy'    => 'fxr_inkt_model',
+			'label'       => 'Inkt',
+			'placeholder' => 'Bijv. HP, Deskjet, 2720...',
+		),
+		'stofzuiger' => array(
+			'taxonomy'    => 'fxr_stofzuiger_model',
+			'label'       => 'Stofzuigers',
+			'placeholder' => 'Bijv. Miele, S241i, GD1000...',
+		),
+	);
+
+	$atts = shortcode_atts(
+		array(
+			'title'     => 'Zoek je onderdeel',
+			'categorie' => 'inkt',
+			'min_chars' => 2,
+		),
+		$atts,
+		'fixxar_zoeker'
+	);
+
+	$actief = isset( $categorie_config[ $atts['categorie'] ] ) ? $atts['categorie'] : 'inkt';
+
+	$categorieen = array();
+	foreach ( $categorie_config as $key => $cat ) {
+		$cat['actief']  = ( $key === $actief );
+		$categorieen[] = $cat;
+	}
+
+	wp_enqueue_style( 'fxr-zoeker', FXR_ZOEKER_URL . 'assets/css/fxr-zoeker.css', array(), FXR_ZOEKER_VERSION );
+	wp_enqueue_script( 'fxr-zoeker', FXR_ZOEKER_URL . 'assets/js/fxr-zoeker.js', array(), FXR_ZOEKER_VERSION, true );
+	wp_localize_script(
+		'fxr-zoeker',
+		'fxrZoeker',
+		array(
+			'ajaxUrl' => admin_url( 'admin-ajax.php' ),
+			'nonce'   => wp_create_nonce( 'fxr_zoeker_nonce' ),
+		)
+	);
+
+	static $instance = 0;
+	++$instance;
+	$uid = 'gecombineerd-' . $instance;
+
+	$render_atts = array(
+		'title'       => $atts['title'],
+		'min_chars'   => $atts['min_chars'],
+		'placeholder' => $categorie_config[ $actief ]['placeholder'],
+	);
+
+	ob_start();
+	fxr_render_autocomplete_markup( $render_atts, $categorie_config[ $actief ]['taxonomy'], $uid, 'autocomplete', $categorieen );
+	return ob_get_clean();
 }
 
 function fxr_render_zoeker_shortcode( $atts, $taxonomy, $default_title, $default_mode, $default_placeholder = '' ) {
@@ -214,12 +291,38 @@ function fxr_render_dropdown_markup( $atts, $taxonomy, $uid, $mode ) {
 /**
  * Markup voor mode "autocomplete": één zoekveld + voorstellenlijst (combobox).
  * Toont pas resultaten zodra een voorstel is gekozen, niet bij vrij typen.
+ *
+ * $categorieen is optioneel en alleen gevuld voor de gecombineerde zoeker
+ * [fixxar_zoeker]: een lijst van categorieknoppen (elk met taxonomy/label/
+ * placeholder/actief) waarmee je boven het (ene) zoekveld kunt wisselen
+ * tussen bijvoorbeeld "Inkt" en "Stofzuigers". Bij de losse shortcodes
+ * ([fixxar_inkt_zoeker], [fixxar_stofzuiger_zoeker]) is dit gewoon null en
+ * verschijnen er geen knoppen.
  */
-function fxr_render_autocomplete_markup( $atts, $taxonomy, $uid, $mode ) {
+function fxr_render_autocomplete_markup( $atts, $taxonomy, $uid, $mode, $categorieen = null ) {
+	$wrapper_class = $categorieen ? 'fxr-zoeker--gecombineerd' : 'fxr-zoeker--' . fxr_taxonomy_css_slug( $taxonomy );
 	?>
-	<div class="fxr-zoeker fxr-zoeker--<?php echo esc_attr( fxr_taxonomy_css_slug( $taxonomy ) ); ?>" data-taxonomy="<?php echo esc_attr( $taxonomy ); ?>" data-mode="<?php echo esc_attr( $mode ); ?>" data-min-chars="<?php echo esc_attr( $atts['min_chars'] ); ?>">
+	<div class="fxr-zoeker <?php echo esc_attr( $wrapper_class ); ?>" data-taxonomy="<?php echo esc_attr( $taxonomy ); ?>" data-mode="<?php echo esc_attr( $mode ); ?>" data-min-chars="<?php echo esc_attr( $atts['min_chars'] ); ?>">
 		<?php if ( ! empty( $atts['title'] ) ) : ?>
 			<h2 class="fxr-zoeker__title"><?php echo esc_html( $atts['title'] ); ?></h2>
+		<?php endif; ?>
+
+		<?php if ( $categorieen ) : ?>
+			<!-- role="tablist"/"tab": voor schermlezers is dit een keuze tussen
+			     twee categorieën, ook al is er maar één gedeeld zoekveld
+			     (in plaats van een apart paneel per tab). -->
+			<div class="fxr-zoeker__categorieen" role="tablist" aria-label="Kies een categorie">
+				<?php foreach ( $categorieen as $cat ) : ?>
+					<button
+						type="button"
+						class="fxr-zoeker__categorie-knop<?php echo ! empty( $cat['actief'] ) ? ' is-actief' : ''; ?>"
+						role="tab"
+						aria-selected="<?php echo ! empty( $cat['actief'] ) ? 'true' : 'false'; ?>"
+						data-taxonomy="<?php echo esc_attr( $cat['taxonomy'] ); ?>"
+						data-placeholder="<?php echo esc_attr( $cat['placeholder'] ); ?>"
+					><?php echo esc_html( $cat['label'] ); ?></button>
+				<?php endforeach; ?>
+			</div>
 		<?php endif; ?>
 
 		<div class="fxr-zoeker__field fxr-zoeker__field--autocomplete">

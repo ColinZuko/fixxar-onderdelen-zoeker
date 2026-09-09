@@ -1,51 +1,135 @@
 /* Fixxar Onderdelen Zoeker — basisstijl, pas gerust aan op je eigen huisstijl.
+ *
+ * THEMEN PER ZOEKER
+ * ==================
+ * Alle kleuren, randen, afronding en dergelijke staan hieronder als CSS-
+ * variabelen ("custom properties") op .fxr-zoeker, met een standaardwaarde.
+ * Elke regel in dit bestand gebruikt zo'n variabele in plaats van een vaste
+ * waarde. Wil je de inkt-zoeker en de stofzuiger-zoeker er anders uit laten
+ * zien? Dan hoef je meestal geen losse regels te overschrijven — je zet
+ * gewoon de variabelen die je wil aanpassen op de modifier-class:
+ *
+ *   .fxr-zoeker--inkt {
+ *       --fxr-accent: #0066cc;       // focus-rand, iconen
+ *       --fxr-border-radius: 4px;    // hoekjes van velden/kaarten
+ *       --fxr-card-border: #dbe7f5;  // randkleur productkaarten
+ *   }
+ *
+ *   .fxr-zoeker--stofzuiger {
+ *       --fxr-accent: #2e8b46;
+ *       --fxr-border-radius: 10px;
+ *   }
+ *
+ * Dat werkt omdat .fxr-zoeker--inkt/--stofzuiger op hetzelfde element staat
+ * als .fxr-zoeker zelf (dus geen aparte selector-specificiteit nodig) en
+ * CSS-variabelen automatisch "naar beneden" vererven naar alles daarbinnen
+ * (velden, knoppen, de voorstellenlijst, de productkaarten...).
+ *
+ * Wil je iets stylen waar geen variabele voor is (bijvoorbeeld een heel
+ * andere lay-out voor de kaarten)? Dan kun je nog steeds gewoon los
+ * overschrijven met de modifier-class ervoor, bijvoorbeeld:
+ *
+ *   .fxr-zoeker--inkt .fxr-zoeker__card { flex-direction: row; }
  */
+
 .fxr-zoeker {
-  /* Geen eigen max-width: de zoeker vult gewoon de volledige breedte
+	/* Geen eigen max-width: de zoeker vult gewoon de volledige breedte
 	   van de kolom/sectie waarin je hem via UX Builder plaatst, net als
 	   ieder ander Flatsome-element (tekst, afbeelding, etc.). */
-  width: 100%;
-  box-sizing: border-box;
-  margin: 0 0 2rem;
-  background-color: white;
-  border: 1px solid #8c8686;
-  padding: 1rem;
-  border-radius: 6px;
+	width: 100%;
+	box-sizing: border-box;
+	margin: 0 0 2rem;
+
+	/* --- Design tokens (standaardwaarden) --- */
+	--fxr-accent: #2e8b46;              /* Iconen, focus-rand, hover-accenten — geschat "fixxar-groen", zet op je eigen merkkleur. */
+	--fxr-gap: 1rem;                    /* Ruimte tussen velden/kaarten. */
+	--fxr-font-size: 1rem;              /* Tekstgrootte in velden. */
+	--fxr-border-color: #ccc;           /* Rand van in-/select-velden en voorstellenlijst. */
+	--fxr-border-radius: 6px;           /* Hoekafronding van velden en voorstellenlijst. */
+	--fxr-input-bg: #fff;               /* Achtergrond van in-/select-velden. */
+	--fxr-input-padding: 0.75rem 1rem;  /* Binnenruimte van in-/select-velden. */
+	--fxr-disabled-bg: #f5f5f5;         /* Achtergrond van uitgeschakelde velden. */
+	--fxr-disabled-color: #999;         /* Tekstkleur van uitgeschakelde velden. */
+	--fxr-status-color: #666;           /* Kleur van de statusregel/melding. */
+	--fxr-loader-size: 30px;            /* Afmeting van het draaiende tandwiel. */
+	--fxr-listbox-bg: #fff;             /* Achtergrond van de voorstellenlijst. */
+	--fxr-listbox-shadow: 0 4px 16px rgba(0, 0, 0, 0.1); /* Schaduw onder de voorstellenlijst. */
+	--fxr-option-hover-bg: #f0f4f1;     /* Achtergrond van een voorstel bij hover/toetsenbord-highlight. */
+	--fxr-option-name-weight: 600;      /* Dikte van de modelnaam in een voorstel. */
+	--fxr-breadcrumb-color: #777;       /* Kleur van "Merk › Serie" onder een voorstel. */
+	--fxr-card-border: #eee;            /* Randkleur van een productkaart. */
+	--fxr-card-radius: 8px;             /* Hoekafronding van een productkaart. */
+	--fxr-card-shadow-hover: 0 2px 10px rgba(0, 0, 0, 0.08); /* Schaduw bij hover over een productkaart. */
+	--fxr-card-price-color: #333;       /* Kleur van de prijs op een productkaart. */
+	--fxr-card-stock-color: #c0392b;    /* Kleur van "Niet op voorraad". */
 }
 
+/* Elke zoeker heeft naast .fxr-zoeker ook een eigen modifier-class op de
+   wrapper: .fxr-zoeker--inkt (fixxar_inkt_zoeker) en
+   .fxr-zoeker--stofzuiger (fixxar_stofzuiger_zoeker). Vul hier per zoeker de
+   tokens in die je anders wil — alles wat je weglaat blijft gewoon de
+   standaardwaarde hierboven volgen. */
 .fxr-zoeker--inkt {
-  background-color: #95c11f;
+	/* --fxr-accent: #0066cc; */
 }
 
 .fxr-zoeker--stofzuiger {
-  background-color: #719413;
+	/* --fxr-accent: #2e8b46; */
+}
+
+/* Categorieknoppen (alleen bij [fixxar_zoeker], de gecombineerde zoeker met
+   één zoekbalk + een knop per categorie erboven). */
+.fxr-zoeker__categorieen {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+	margin-bottom: 1rem;
+}
+
+.fxr-zoeker__categorie-knop {
+	appearance: none;
+	cursor: pointer;
+	padding: 0.5rem 1.1rem;
+	font-size: 0.95rem;
+	line-height: 1.2;
+	color: inherit;
+	background-color: transparent;
+	border: 1px solid var(--fxr-border-color);
+	border-radius: 999px; /* Pil-vorm; zet op var(--fxr-border-radius) als je liever rechthoekige knoppen hebt. */
+}
+
+.fxr-zoeker__categorie-knop:hover {
+	border-color: var(--fxr-accent);
+}
+
+.fxr-zoeker__categorie-knop.is-actief {
+	color: #fff;
+	background-color: var(--fxr-accent);
+	border-color: var(--fxr-accent);
 }
 
 .fxr-zoeker__title {
-  /* Bewust geen font-size/font-weight/color hier: dit is een echte <h2>,
+	/* Bewust geen font-size/font-weight/color hier: dit is een echte <h2>,
 	   die krijgt automatisch de kopstijl die je thema al gebruikt voor
 	   h2's, en volgt mee als je die stijl later in Flatsome aanpast. */
-  margin: 0 0 0.15rem;
-  color: white;
+	margin: 0 0 1rem;
 }
 
 /* Merk / Serie / Nummer naast elkaar; wrapt naar onder elkaar op smalle schermen. */
 .fxr-zoeker__row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--fxr-gap);
 }
 
 .fxr-zoeker__field {
-  flex: 1 1 200px;
-  min-width: 0;
+	flex: 1 1 200px;
+	min-width: 0;
 }
 
 .fxr-zoeker__label {
-  display: block;
-  margin-bottom: 1rem;
-  color: rgba(255, 255, 255, 0.815);
-  font-weight: 300;
+	display: block;
+	margin-bottom: 0.4rem;
 }
 
 /* Specifiekere selector (.fxr-zoeker als "voorvoegsel") + !important:
@@ -53,93 +137,95 @@
    hogere specificiteit, die anders border-radius/border overschrijft. */
 .fxr-zoeker .fxr-zoeker__input,
 .fxr-zoeker .fxr-zoeker__select {
-  width: 100%;
-  box-sizing: border-box;
-  padding: 6px 10px;
-  appearance: none;
-  border: 1px solid #8c8686 !important;
-  border-radius: 6px !important;
-  background-color: white;
+	width: 100%;
+	box-sizing: border-box;
+	padding: var(--fxr-input-padding);
+	font-size: var(--fxr-font-size);
+	-webkit-appearance: none;
+	appearance: none;
+	border: 1px solid var(--fxr-border-color) !important;
+	border-radius: var(--fxr-border-radius) !important;
+	background-color: var(--fxr-input-bg);
 }
 
 .fxr-zoeker__input:focus,
 .fxr-zoeker__select:focus {
-  outline: none;
-  border-color: #95c11f;
+	outline: none;
+	border-color: var(--fxr-accent);
 }
 
 .fxr-zoeker__input:disabled,
 .fxr-zoeker__select:disabled {
-  background-color: var(--fxr-disabled-bg);
-  color: var(--fxr-disabled-color);
-  cursor: not-allowed;
+	background-color: var(--fxr-disabled-bg);
+	color: var(--fxr-disabled-color);
+	cursor: not-allowed;
 }
 
 /* Combobox (mode "autocomplete"): tekstveld + voorstellenlijst eronder. */
 .fxr-zoeker__field--autocomplete {
-  max-width: 420px;
+	max-width: 420px;
 }
 
 .fxr-combobox {
-  position: relative;
+	position: relative;
 }
 
 .fxr-combobox__listbox {
-  position: absolute;
-  z-index: 20;
-  top: calc(100% + 4px);
-  left: 0;
-  right: 0;
-  margin: 0;
-  padding: 0.25rem;
-  list-style: none;
-  max-height: 280px;
-  overflow-y: auto;
-  background: white;
-  border: 1px solid #8c8686;
-  border-radius: 6px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+	position: absolute;
+	z-index: 20;
+	top: calc(100% + 4px);
+	left: 0;
+	right: 0;
+	margin: 0;
+	padding: 0.25rem;
+	list-style: none;
+	max-height: 280px;
+	overflow-y: auto;
+	background: var(--fxr-listbox-bg);
+	border: 1px solid var(--fxr-border-color);
+	border-radius: var(--fxr-border-radius);
+	box-shadow: var(--fxr-listbox-shadow);
 }
 
 .fxr-combobox__listbox[hidden] {
-  display: none;
+	display: none;
 }
 
 .fxr-combobox__option {
-  display: flex;
-  flex-direction: column;
-  padding: 0.5rem 0.6rem;
-  border-radius: 4px;
-  cursor: pointer;
+	display: flex;
+	flex-direction: column;
+	padding: 0.5rem 0.6rem;
+	border-radius: 4px;
+	cursor: pointer;
 }
 
 .fxr-combobox__option.is-active,
 .fxr-combobox__option:hover {
-  background-color: rgba(0, 0, 0, 0.05);
+	background-color: var(--fxr-option-hover-bg);
 }
 
 .fxr-combobox__name {
-  font-weight: 500;
+	font-weight: var(--fxr-option-name-weight);
 }
 
 .fxr-combobox__breadcrumb {
-  font-size: 0.85rem;
-  color: rgba(0, 0, 0, 0.6);
+	font-size: 0.85rem;
+	color: var(--fxr-breadcrumb-color);
 }
 
 .fxr-combobox__empty {
-  padding: 0.5rem 0.6rem;
-  color: rgba(0, 0, 0, 0.6);
-  font-size: 0.9rem;
+	padding: 0.5rem 0.6rem;
+	color: var(--fxr-disabled-color);
+	font-size: 0.9rem;
 }
 
 .fxr-zoeker__status {
-  margin-top: 0.5rem;
-  font-size: 0.9rem;
-  color: rgba(0, 0, 0, 0.6);
-  min-height: 1.2em;
-  display: flex;
-  align-items: center;
+	margin-top: 0.5rem;
+	font-size: 0.9rem;
+	color: var(--fxr-status-color);
+	min-height: 1.2em;
+	display: flex;
+	align-items: center;
 }
 
 /* Draaiend Fixxar-tandwiel i.p.v. "Zoeken..."-tekst tijdens het zoeken.
@@ -148,77 +234,76 @@
    tandwiel een eigen, andere kleur geven dan de focus-rand, zet dan
    --fxr-icon-color los op .fxr-zoeker--inkt / .fxr-zoeker--stofzuiger. */
 .fxr-zoeker__loader {
-  display: inline-flex;
-  width: 2rem;
-  height: 2rem;
-  margin-right: 0.6rem;
-  flex-shrink: 0;
-  color: #8c8686;
-  animation: fxr-spin 1.2s linear infinite;
+	--fxr-icon-color: var(--fxr-accent);
+	display: inline-flex;
+	width: var(--fxr-loader-size);
+	height: var(--fxr-loader-size);
+	margin-right: 0.6rem;
+	flex-shrink: 0;
+	color: var(--fxr-icon-color);
+	animation: fxr-spin 1.2s linear infinite;
 }
 
 .fxr-zoeker__loader[hidden] {
-  display: none;
+	display: none;
 }
 
 .fxr-zoeker__loader svg {
-  width: 100%;
-  height: 100%;
+	width: 100%;
+	height: 100%;
 }
 
 @keyframes fxr-spin {
-  from {
-    transform: rotate(0deg);
-  }
+	from {
+		transform: rotate(0deg);
+	}
 
-  to {
-    transform: rotate(360deg);
-  }
+	to {
+		transform: rotate(360deg);
+	}
 }
 
 .fxr-zoeker__grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: 1rem;
-  margin-top: 1rem;
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+	gap: var(--fxr-gap);
+	margin-top: 1rem;
 }
 
 .fxr-zoeker__card {
-  display: block;
-  text-decoration: none;
-  background-color: white;
-  border: 1px solid #8c8686;
-  border-radius: 8px;
-  padding: 0.75rem;
-  transition: box-shadow 0.15s ease;
+	display: block;
+	text-decoration: none;
+	color: inherit;
+	border: 1px solid var(--fxr-card-border);
+	border-radius: var(--fxr-card-radius);
+	padding: 0.75rem;
+	transition: box-shadow 0.15s ease;
 }
 
 .fxr-zoeker__card:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+	box-shadow: var(--fxr-card-shadow-hover);
 }
 
 .fxr-zoeker__card-img {
-  width: 100%;
-  height: auto;
-  border-radius: 4px;
-  margin-bottom: 0.5rem;
+	width: 100%;
+	height: auto;
+	border-radius: 4px;
+	margin-bottom: 0.5rem;
 }
 
 .fxr-zoeker__card-title {
-  /* Bewust geen font-size/font-weight hier: dit is een <h3>, die volgt
+	/* Bewust geen font-size/font-weight hier: dit is een <h3>, die volgt
 	   automatisch de kopstijl van je thema. */
-  margin: 0 0 0.25rem;
-  font-weight: 600;
-  font-size: 1rem;
+	margin: 0 0 0.25rem;
 }
 
 .fxr-zoeker__card-price {
-  font-size: 0.8rem;
-  color: #95c11e;
+	font-size: 0.9rem;
+	color: var(--fxr-card-price-color);
 }
 
 .fxr-zoeker__card-stock {
-  font-size: 0.8rem;
-  color: var(--fxr-card-stock-color);
-  margin-top: 0.25rem;
+	font-size: 0.8rem;
+	color: var(--fxr-card-stock-color);
+	margin-top: 0.25rem;
 }
