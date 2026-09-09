@@ -85,7 +85,7 @@ function fxr_render_inkt_shortcode( $atts ) {
 
 add_shortcode( 'fixxar_stofzuiger_zoeker', 'fxr_render_stofzuiger_shortcode' );
 function fxr_render_stofzuiger_shortcode( $atts ) {
-	return fxr_render_zoeker_shortcode( $atts, 'fxr_stofzuiger_model', 'Zoek je stofzuigeronderdeel', 'autocomplete', 'Bijv. Miele, S241i, GD1000...' );
+	return fxr_render_zoeker_shortcode( $atts, 'fxr_stofzuiger_model', 'Zoek je stofzuigerzak', 'autocomplete', 'Bijv. Miele, S241i, GD1000...' );
 }
 
 function fxr_render_zoeker_shortcode( $atts, $taxonomy, $default_title, $default_mode, $default_placeholder = '' ) {
