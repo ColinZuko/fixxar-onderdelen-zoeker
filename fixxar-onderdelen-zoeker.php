@@ -16,6 +16,28 @@ define( 'FXR_ZOEKER_PATH', plugin_dir_path( __FILE__ ) );
 define( 'FXR_ZOEKER_URL', plugin_dir_url( __FILE__ ) );
 
 /**
+ * Auto-updates via GitHub (Plugin Update Checker, meegeleverd in de map
+ * plugin-update-checker/). WordPress vergelijkt de "Version:" hierboven met
+ * de nieuwste git-tag op de "main"-branch van de GitHub-repo, en toont bij
+ * een nieuwere tag gewoon de normale WordPress-updatemelding bij deze
+ * plugin — net als bij een plugin uit de WordPress.org-directory.
+ *
+ * Nieuwe versie uitbrengen: versienummer hierboven + bij FXR_ZOEKER_VERSION
+ * ophogen, committen, taggen (bv. "git tag v2.2.1") en naar GitHub pushen
+ * (ook de tag: "git push origin v2.2.1"). Zonder tag op GitHub heeft deze
+ * update-checker niets om mee te vergelijken en verschijnt er nooit een
+ * update-melding, ook niet als dit stuk code zelf goed staat.
+ */
+require_once FXR_ZOEKER_PATH . 'plugin-update-checker/plugin-update-checker.php';
+
+$fxr_update_checker = YahnisElsts\PluginUpdateChecker\v5\PucFactory::buildUpdateChecker(
+	'https://github.com/ColinZuko/fixxar-onderdelen-zoeker/',
+	__FILE__,
+	'fixxar-onderdelen-zoeker'
+);
+$fxr_update_checker->setBranch( 'main' );
+
+/**
  * De twee taxonomieën, allebei hiërarchisch (zoals Categorieën):
  * Merk (top-niveau) > Serie (kind van Merk) > Model/nummer (kind van Serie).
  *
