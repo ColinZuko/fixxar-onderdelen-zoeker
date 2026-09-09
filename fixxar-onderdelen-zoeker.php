@@ -1,8 +1,8 @@
 <?php
 /**
  * Plugin Name: Fixxar Onderdelen Zoeker
- * Description: Twee zoeksystemen (inkt en stofzuigeronderdelen) waarmee bezoekers het juiste onderdeel vinden. Inkt: Merk > Serie > Modelnummer-dropdowns. Stofzuigers: één zoekveld met autocomplete op alle modellen. Shortcodes: [fixxar_inkt_zoeker] en [fixxar_stofzuiger_zoeker].
- * Version: 2.1.0
+ * Description: Twee zoeksystemen (inkt en stofzuigeronderdelen) waarmee bezoekers het juiste onderdeel vinden. Beide via één zoekveld met autocomplete over alle Merk/Serie/Model-combinaties, dat pas resultaten toont zodra een voorstel is gekozen. Shortcodes: [fixxar_inkt_zoeker] en [fixxar_stofzuiger_zoeker].
+ * Version: 2.2.0
  * Author: Fixxar
  * Text Domain: fixxar-zoeker
  */
@@ -11,7 +11,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Direct toegang niet toegestaan.
 }
 
-define( 'FXR_ZOEKER_VERSION', '2.1.0' );
+define( 'FXR_ZOEKER_VERSION', '2.2.0' );
 define( 'FXR_ZOEKER_PATH', plugin_dir_path( __FILE__ ) );
 define( 'FXR_ZOEKER_URL', plugin_dir_url( __FILE__ ) );
 
@@ -70,36 +70,31 @@ function fxr_register_taxonomies() {
 /**
  * Shortcodes: [fixxar_inkt_zoeker] en [fixxar_stofzuiger_zoeker].
  *
- * Er zijn twee weergaves ("mode"):
- * - "dropdown"     Merk-dropdown -> Serie-dropdown -> modelnummer-invoerveld.
- *                   Prima voor inkt: klanten typen meestal een kort, precies
- *                   cartridgenummer en kennen vaak hun merk/serie al.
- * - "autocomplete" Eén zoekveld dat meezoekt in alle modelnamen (over alle
- *                   merken heen) en pas resultaten toont zodra je een
- *                   voorstel uit de lijst aanklikt/kiest. Prettiger voor
- *                   stofzuigers: modelaanduidingen zijn veel wisselender
- *                   (bv. "S241i", "GD1000", "Sweefty") en klanten weten niet
- *                   altijd vooraf bij welk merk/serie hun toestel hoort.
- *
- * Beide modes zijn met een shortcode-attribuut om te zetten, bv.
- * [fixxar_stofzuiger_zoeker mode="dropdown"], mocht dat ooit gewenst zijn.
+ * Beide staan standaard op mode "autocomplete": één zoekveld dat meezoekt op
+ * de volledige combinatie Merk + Serie + Model (over alle merken heen), en
+ * pas resultaten toont zodra de klant een voorstel uit de lijst kiest — nooit
+ * op basis van vrij getypte tekst. Er is ook nog een oudere mode "dropdown"
+ * (Merk-dropdown -> Serie-dropdown -> modelnummer-invoerveld) die per
+ * shortcode terug te zetten is met een attribuut, mocht dat ooit gewenst
+ * zijn: [fixxar_inkt_zoeker mode="dropdown"].
  */
 add_shortcode( 'fixxar_inkt_zoeker', 'fxr_render_inkt_shortcode' );
 function fxr_render_inkt_shortcode( $atts ) {
-	return fxr_render_zoeker_shortcode( $atts, 'fxr_inkt_model', 'Zoek je inkt', 'dropdown' );
+	return fxr_render_zoeker_shortcode( $atts, 'fxr_inkt_model', 'Inkt zoekhulp', 'autocomplete', 'Bijv. HP, Deskjet, 2720...' );
 }
 
 add_shortcode( 'fixxar_stofzuiger_zoeker', 'fxr_render_stofzuiger_shortcode' );
 function fxr_render_stofzuiger_shortcode( $atts ) {
-	return fxr_render_zoeker_shortcode( $atts, 'fxr_stofzuiger_model', 'Zoek je stofzuigeronderdeel', 'autocomplete' );
+	return fxr_render_zoeker_shortcode( $atts, 'fxr_stofzuiger_model', 'Stofzuigerzak zoekhulp', 'autocomplete', 'Bijv. Miele, S241i, GD1000...' );
 }
 
-function fxr_render_zoeker_shortcode( $atts, $taxonomy, $default_title, $default_mode ) {
+function fxr_render_zoeker_shortcode( $atts, $taxonomy, $default_title, $default_mode, $default_placeholder = '' ) {
 	$atts = shortcode_atts(
 		array(
-			'title'     => $default_title,
-			'mode'      => $default_mode, // "dropdown" of "autocomplete".
-			'min_chars' => 'autocomplete' === $default_mode ? 2 : 1,
+			'title'       => $default_title,
+			'mode'        => $default_mode, // "dropdown" of "autocomplete".
+			'min_chars'   => 'autocomplete' === $default_mode ? 2 : 1,
+			'placeholder' => $default_placeholder, // Alleen gebruikt in mode "autocomplete".
 		),
 		$atts,
 		'fixxar_zoeker'
@@ -215,7 +210,7 @@ function fxr_render_autocomplete_markup( $atts, $taxonomy, $uid, $mode ) {
 					type="text"
 					id="fxr-model-<?php echo esc_attr( $uid ); ?>"
 					class="fxr-zoeker__input fxr-zoeker__input--model"
-					placeholder="Bijv. Miele, S241i, GD1000..."
+					placeholder="<?php echo esc_attr( $atts['placeholder'] ); ?>"
 					autocomplete="off"
 					role="combobox"
 					aria-expanded="false"
