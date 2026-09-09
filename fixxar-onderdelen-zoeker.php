@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Fixxar Onderdelen Zoeker
  * Description: Twee zoeksystemen (inkt en stofzuigeronderdelen) waarmee bezoekers het juiste onderdeel vinden. Beide via één zoekveld met autocomplete over alle Merk/Serie/Model-combinaties, dat pas resultaten toont zodra een voorstel is gekozen. Shortcodes: [fixxar_inkt_zoeker] en [fixxar_stofzuiger_zoeker].
- * Version: 2.2.0
+ * Version: 2.2.1
  * Author: Fixxar
  * Text Domain: fixxar-zoeker
  */
@@ -11,7 +11,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Direct toegang niet toegestaan.
 }
 
-define( 'FXR_ZOEKER_VERSION', '2.2.0' );
+define( 'FXR_ZOEKER_VERSION', '2.2.1' );
 define( 'FXR_ZOEKER_PATH', plugin_dir_path( __FILE__ ) );
 define( 'FXR_ZOEKER_URL', plugin_dir_url( __FILE__ ) );
 
@@ -80,12 +80,12 @@ function fxr_register_taxonomies() {
  */
 add_shortcode( 'fixxar_inkt_zoeker', 'fxr_render_inkt_shortcode' );
 function fxr_render_inkt_shortcode( $atts ) {
-	return fxr_render_zoeker_shortcode( $atts, 'fxr_inkt_model', 'Inkt zoekhulp', 'autocomplete', 'Bijv. HP, Deskjet, 2720...' );
+	return fxr_render_zoeker_shortcode( $atts, 'fxr_inkt_model', 'Zoek je inkt', 'autocomplete', 'Bijv. HP, Deskjet, 2720...' );
 }
 
 add_shortcode( 'fixxar_stofzuiger_zoeker', 'fxr_render_stofzuiger_shortcode' );
 function fxr_render_stofzuiger_shortcode( $atts ) {
-	return fxr_render_zoeker_shortcode( $atts, 'fxr_stofzuiger_model', 'Stofzuigerzak zoekhulp', 'autocomplete', 'Bijv. Miele, S241i, GD1000...' );
+	return fxr_render_zoeker_shortcode( $atts, 'fxr_stofzuiger_model', 'Zoek je stofzuigeronderdeel', 'autocomplete', 'Bijv. Miele, S241i, GD1000...' );
 }
 
 function fxr_render_zoeker_shortcode( $atts, $taxonomy, $default_title, $default_mode, $default_placeholder = '' ) {
@@ -147,7 +147,7 @@ function fxr_render_dropdown_markup( $atts, $taxonomy, $uid, $mode ) {
 		$merken = array();
 	}
 	?>
-	<div class="fxr-zoeker" data-taxonomy="<?php echo esc_attr( $taxonomy ); ?>" data-mode="<?php echo esc_attr( $mode ); ?>" data-min-chars="<?php echo esc_attr( $atts['min_chars'] ); ?>">
+	<div class="fxr-zoeker fxr-zoeker--<?php echo esc_attr( fxr_taxonomy_css_slug( $taxonomy ) ); ?>" data-taxonomy="<?php echo esc_attr( $taxonomy ); ?>" data-mode="<?php echo esc_attr( $mode ); ?>" data-min-chars="<?php echo esc_attr( $atts['min_chars'] ); ?>">
 		<?php if ( ! empty( $atts['title'] ) ) : ?>
 			<!-- Gewone <h2>: krijgt automatisch de kopstijl van je thema. -->
 			<h2 class="fxr-zoeker__title"><?php echo esc_html( $atts['title'] ); ?></h2>
@@ -195,7 +195,7 @@ function fxr_render_dropdown_markup( $atts, $taxonomy, $uid, $mode ) {
  */
 function fxr_render_autocomplete_markup( $atts, $taxonomy, $uid, $mode ) {
 	?>
-	<div class="fxr-zoeker" data-taxonomy="<?php echo esc_attr( $taxonomy ); ?>" data-mode="<?php echo esc_attr( $mode ); ?>" data-min-chars="<?php echo esc_attr( $atts['min_chars'] ); ?>">
+	<div class="fxr-zoeker fxr-zoeker--<?php echo esc_attr( fxr_taxonomy_css_slug( $taxonomy ) ); ?>" data-taxonomy="<?php echo esc_attr( $taxonomy ); ?>" data-mode="<?php echo esc_attr( $mode ); ?>" data-min-chars="<?php echo esc_attr( $atts['min_chars'] ); ?>">
 		<?php if ( ! empty( $atts['title'] ) ) : ?>
 			<h2 class="fxr-zoeker__title"><?php echo esc_html( $atts['title'] ); ?></h2>
 		<?php endif; ?>
@@ -562,4 +562,17 @@ function fxr_get_products_data_by_terms( $taxonomy, $term_ids ) {
 function fxr_valid_taxonomy( $taxonomy ) {
 	$allowed = array( 'fxr_inkt_model', 'fxr_stofzuiger_model' );
 	return in_array( $taxonomy, $allowed, true ) ? $taxonomy : false;
+}
+
+/**
+ * Helper: korte, css-vriendelijke naam per taxonomie, gebruikt voor de
+ * modifier-class op de zoeker-wrapper (bv. "fxr-zoeker--inkt"), zodat je de
+ * twee zoekers los van elkaar kunt stylen in fxr-zoeker.css.
+ */
+function fxr_taxonomy_css_slug( $taxonomy ) {
+	$slugs = array(
+		'fxr_inkt_model'       => 'inkt',
+		'fxr_stofzuiger_model' => 'stofzuiger',
+	);
+	return isset( $slugs[ $taxonomy ] ) ? $slugs[ $taxonomy ] : sanitize_html_class( $taxonomy );
 }
