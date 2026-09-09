@@ -2,8 +2,8 @@
 /**
  * Plugin Name: Fixxar Onderdelen Zoeker
  * Description: Twee zoeksystemen (inkt en stofzuigeronderdelen) waarmee bezoekers het juiste onderdeel vinden. Beide via één zoekveld met autocomplete over alle Merk/Serie/Model-combinaties, dat pas resultaten toont zodra een voorstel is gekozen. Shortcodes: [fixxar_inkt_zoeker] en [fixxar_stofzuiger_zoeker].
- * Version: 2.3.0
- * Author: Fixxar
+ * Version: 2.4.0
+ * Author: Fixxar Nederland
  * Text Domain: fixxar-zoeker
  */
 
@@ -11,7 +11,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Direct toegang niet toegestaan.
 }
 
-define( 'FXR_ZOEKER_VERSION', '2.3.0' );
+define( 'FXR_ZOEKER_VERSION', '2.4.0' );
 define( 'FXR_ZOEKER_PATH', plugin_dir_path( __FILE__ ) );
 define( 'FXR_ZOEKER_URL', plugin_dir_url( __FILE__ ) );
 
@@ -23,8 +23,8 @@ define( 'FXR_ZOEKER_URL', plugin_dir_url( __FILE__ ) );
  * plugin — net als bij een plugin uit de WordPress.org-directory.
  *
  * Nieuwe versie uitbrengen: versienummer hierboven + bij FXR_ZOEKER_VERSION
- * ophogen, committen, taggen (bv. "git tag v2.2.1") en naar GitHub pushen
- * (ook de tag: "git push origin v2.2.1"). Zonder tag op GitHub heeft deze
+ * ophogen, committen, taggen (bv. "git tag v2.4.0") en naar GitHub pushen
+ * (ook de tag: "git push origin v2.4.0"). Zonder tag op GitHub heeft deze
  * update-checker niets om mee te vergelijken en verschijnt er nooit een
  * update-melding, ook niet als dit stuk code zelf goed staat.
  */
@@ -145,7 +145,8 @@ function fxr_render_gecombineerde_shortcode( $atts ) {
 
 	$atts = shortcode_atts(
 		array(
-			'title'     => 'Zoek je onderdeel',
+			'eyebrow'   => 'Fixxar Zoekmachine', // Optioneel: klein tekstje boven de titel, bv. "Vind je onderdeel".
+			'title'     => 'Eén zoekmachine voor alle inktcartridges en stofzuigerzakken',
 			'categorie' => 'inkt',
 			'min_chars' => 2,
 		),
@@ -177,6 +178,7 @@ function fxr_render_gecombineerde_shortcode( $atts ) {
 	$uid = 'gecombineerd-' . $instance;
 
 	$render_atts = array(
+		'eyebrow'   => $atts['eyebrow'],
 		'title'       => $atts['title'],
 		'min_chars'   => $atts['min_chars'],
 		'placeholder' => $categorie_config[ $actief ]['placeholder'],
@@ -303,6 +305,10 @@ function fxr_render_autocomplete_markup( $atts, $taxonomy, $uid, $mode, $categor
 	$wrapper_class = $categorieen ? 'fxr-zoeker--gecombineerd' : 'fxr-zoeker--' . fxr_taxonomy_css_slug( $taxonomy );
 	?>
 	<div class="fxr-zoeker <?php echo esc_attr( $wrapper_class ); ?>" data-taxonomy="<?php echo esc_attr( $taxonomy ); ?>" data-mode="<?php echo esc_attr( $mode ); ?>" data-min-chars="<?php echo esc_attr( $atts['min_chars'] ); ?>">
+		<?php if ( ! empty( $atts['eyebrow'] ) ) : ?>
+			<p class="fxr-zoeker__eyebrow"><?php echo esc_html( $atts['eyebrow'] ); ?></p>
+		<?php endif; ?>
+
 		<?php if ( ! empty( $atts['title'] ) ) : ?>
 			<h2 class="fxr-zoeker__title"><?php echo esc_html( $atts['title'] ); ?></h2>
 		<?php endif; ?>
@@ -326,7 +332,6 @@ function fxr_render_autocomplete_markup( $atts, $taxonomy, $uid, $mode, $categor
 		<?php endif; ?>
 
 		<div class="fxr-zoeker__field fxr-zoeker__field--autocomplete">
-			<label for="fxr-model-<?php echo esc_attr( $uid ); ?>" class="fxr-zoeker__label">Merk, serie of modelnummer</label>
 			<!-- Combobox-patroon: tekstveld + lijst met voorstellen eronder.
 			     role/aria-* zorgen dat schermlezers en toetsenbordgebruikers
 			     hetzelfde kunnen als iemand met een muis. -->

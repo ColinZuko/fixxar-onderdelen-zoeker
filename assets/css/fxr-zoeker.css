@@ -10,13 +10,13 @@
  * gewoon de variabelen die je wil aanpassen op de modifier-class:
  *
  *   .fxr-zoeker--inkt {
- *       --fxr-accent: #0066cc;       // focus-rand, iconen
+ *       --fx-green: #0066cc;       // focus-rand, iconen
  *       --fxr-border-radius: 4px;    // hoekjes van velden/kaarten
  *       --fxr-card-border: #dbe7f5;  // randkleur productkaarten
  *   }
  *
  *   .fxr-zoeker--stofzuiger {
- *       --fxr-accent: #2e8b46;
+ *       --fx-green: #2e8b46;
  *       --fxr-border-radius: 10px;
  *   }
  *
@@ -33,277 +33,380 @@
  */
 
 .fxr-zoeker {
-	/* Geen eigen max-width: de zoeker vult gewoon de volledige breedte
+  /* Geen eigen max-width: de zoeker vult gewoon de volledige breedte
 	   van de kolom/sectie waarin je hem via UX Builder plaatst, net als
 	   ieder ander Flatsome-element (tekst, afbeelding, etc.). */
-	width: 100%;
-	box-sizing: border-box;
-	margin: 0 0 2rem;
+  position: relative;
+  padding: clamp(24px, 4vw, 44px);
+  border-radius: 10px;
+  color: #fff;
+  background-color: var(--fx-green);
+  background-image:
+    radial-gradient(
+      circle 170px at calc(100% + 80px) -80px,
+      var(--fx-green-2) 99.5%,
+      transparent 100%
+    ),
+    radial-gradient(
+      circle 110px at calc(100% - 170px) calc(100% + 30px),
+      rgba(255, 255, 255, 0.07) 99.5%,
+      transparent 100%
+    );
+  background-repeat: no-repeat;
 
-	/* --- Design tokens (standaardwaarden) --- */
-	--fxr-accent: #2e8b46;              /* Iconen, focus-rand, hover-accenten — geschat "fixxar-groen", zet op je eigen merkkleur. */
-	--fxr-gap: 1rem;                    /* Ruimte tussen velden/kaarten. */
-	--fxr-font-size: 1rem;              /* Tekstgrootte in velden. */
-	--fxr-border-color: #ccc;           /* Rand van in-/select-velden en voorstellenlijst. */
-	--fxr-border-radius: 6px;           /* Hoekafronding van velden en voorstellenlijst. */
-	--fxr-input-bg: #fff;               /* Achtergrond van in-/select-velden. */
-	--fxr-input-padding: 0.75rem 1rem;  /* Binnenruimte van in-/select-velden. */
-	--fxr-disabled-bg: #f5f5f5;         /* Achtergrond van uitgeschakelde velden. */
-	--fxr-disabled-color: #999;         /* Tekstkleur van uitgeschakelde velden. */
-	--fxr-status-color: #666;           /* Kleur van de statusregel/melding. */
-	--fxr-loader-size: 30px;            /* Afmeting van het draaiende tandwiel. */
-	--fxr-listbox-bg: #fff;             /* Achtergrond van de voorstellenlijst. */
-	--fxr-listbox-shadow: 0 4px 16px rgba(0, 0, 0, 0.1); /* Schaduw onder de voorstellenlijst. */
-	--fxr-option-hover-bg: #f0f4f1;     /* Achtergrond van een voorstel bij hover/toetsenbord-highlight. */
-	--fxr-option-name-weight: 600;      /* Dikte van de modelnaam in een voorstel. */
-	--fxr-breadcrumb-color: #777;       /* Kleur van "Merk › Serie" onder een voorstel. */
-	--fxr-card-border: #eee;            /* Randkleur van een productkaart. */
-	--fxr-card-radius: 8px;             /* Hoekafronding van een productkaart. */
-	--fxr-card-shadow-hover: 0 2px 10px rgba(0, 0, 0, 0.08); /* Schaduw bij hover over een productkaart. */
-	--fxr-card-price-color: #333;       /* Kleur van de prijs op een productkaart. */
-	--fxr-card-stock-color: #c0392b;    /* Kleur van "Niet op voorraad". */
+  /* --- Design tokens (standaardwaarden) --- */
+  --fx-green: #5f8410; /* Iconen, focus-rand, hover-accenten — geschat "fixxar-groen", zet op je eigen merkkleur. */
+  --fxr-gap: 1rem; /* Ruimte tussen velden/kaarten. */
+  --fxr-font-size: 1rem; /* Tekstgrootte in velden. */
+  --fxr-border-color: #ccc; /* Rand van in-/select-velden en voorstellenlijst. */
+  --fxr-border-radius: 6px;
+  --fxr-border-radius-alt: 6px 6px 0 0; /* Hoekafronding van velden en voorstellenlijst. */
+  --fxr-input-bg: #fff; /* Achtergrond van in-/select-velden. */
+  --fxr-input-padding: 0.75rem 1rem; /* Binnenruimte van in-/select-velden. */
+  --fxr-disabled-bg: #f5f5f5; /* Achtergrond van uitgeschakelde velden. */
+  --fxr-disabled-color: #999; /* Tekstkleur van uitgeschakelde velden. */
+  --fxr-status-color: #666; /* Kleur van de statusregel/melding. */
+  --fxr-loader-size: 30px; /* Afmeting van het draaiende tandwiel. */
+  --fxr-listbox-bg: #fff; /* Achtergrond van de voorstellenlijst. */
+  --fxr-listbox-shadow: 0 4px 16px rgba(0, 0, 0, 0.1); /* Schaduw onder de voorstellenlijst. */
+  --fxr-option-hover-bg: #f0f4f1; /* Achtergrond van een voorstel bij hover/toetsenbord-highlight. */
+  --fxr-option-name-weight: 600; /* Dikte van de modelnaam in een voorstel. */
+  --fxr-breadcrumb-color: #777; /* Kleur van "Merk › Serie" onder een voorstel. */
+  --fxr-card-border: #eee; /* Randkleur van een productkaart. */
+  --fxr-card-radius: 8px; /* Hoekafronding van een productkaart. */
+  --fxr-card-shadow-hover: 0 2px 10px rgba(0, 0, 0, 0.08); /* Schaduw bij hover over een productkaart. */
+  --fxr-card-price-color: #333; /* Kleur van de prijs op een productkaart. */
+  --fxr-card-stock-color: #c0392b;
+  --fx-green-2: #6f9c15; /* fixxar Groen. */
+  --fx-green-lime: #8ab81b; /* fixxar Lime. */
+  --fx-dark: #1b2016; /* fixxar Donker. */
+  --fx-mint: #eaf2d7;
+  --fx-hover: #f4f7ec;
+  --fx-muted: #98a08c;
+  --fx-line: rgba(27, 32, 22, 0.1);
+  --fx-r: 14px;
+  --fx-shadow: 0 26px 60px rgba(27, 32, 22, 0.3);
 }
 
-/* Elke zoeker heeft naast .fxr-zoeker ook een eigen modifier-class op de
-   wrapper: .fxr-zoeker--inkt (fixxar_inkt_zoeker) en
-   .fxr-zoeker--stofzuiger (fixxar_stofzuiger_zoeker). Vul hier per zoeker de
-   tokens in die je anders wil — alles wat je weglaat blijft gewoon de
-   standaardwaarde hierboven volgen. */
-.fxr-zoeker--inkt {
-	/* --fxr-accent: #0066cc; */
+.fxr-zoeker__eyebrow,
+.fxr-zoeker__title,
+.fxr-zoeker__categorieen,
+.fxr-zoeker__row,
+.fxr-zoeker__status {
+  max-width: 680px;
 }
-
-.fxr-zoeker--stofzuiger {
-	/* --fxr-accent: #2e8b46; */
-}
-
 /* Categorieknoppen (alleen bij [fixxar_zoeker], de gecombineerde zoeker met
    één zoekbalk + een knop per categorie erboven). */
 .fxr-zoeker__categorieen {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 0.5rem;
-	margin-bottom: 1rem;
+  display: flex;
+  gap: 9px;
+  margin: 24px 0 14px;
 }
 
 .fxr-zoeker__categorie-knop {
-	appearance: none;
-	cursor: pointer;
-	padding: 0.5rem 1.1rem;
-	font-size: 0.95rem;
-	line-height: 1.2;
-	color: inherit;
-	background-color: transparent;
-	border: 1px solid var(--fxr-border-color);
-	border-radius: 999px; /* Pil-vorm; zet op var(--fxr-border-radius) als je liever rechthoekige knoppen hebt. */
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.9);
+  border-radius: 100px;
+  padding: 10px 20px;
+  font:
+    700 13.5px Figtree,
+    sans-serif;
+  cursor: pointer;
+  transition: all 0.15s;
 }
 
 .fxr-zoeker__categorie-knop:hover {
-	border-color: var(--fxr-accent);
+  background: rgba(255, 255, 255, 0.2);
 }
 
 .fxr-zoeker__categorie-knop.is-actief {
-	color: #fff;
-	background-color: var(--fxr-accent);
-	border-color: var(--fxr-accent);
+  background: #fff;
+  border-color: #fff;
+  color: #3b5509;
+}
+
+.fxr-zoeker__eyebrow {
+  margin: 0 0 0.35rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fxr-input-bg);
 }
 
 .fxr-zoeker__title {
-	/* Bewust geen font-size/font-weight/color hier: dit is een echte <h2>,
-	   die krijgt automatisch de kopstijl die je thema al gebruikt voor
-	   h2's, en volgt mee als je die stijl later in Flatsome aanpast. */
-	margin: 0 0 1rem;
+  font:
+    900 32px/1.02 Figtree,
+    sans-serif;
+  letter-spacing: -0.035em;
+  margin: 14px 0 0 0;
+  color: var(--fxr-input-bg);
 }
 
 /* Merk / Serie / Nummer naast elkaar; wrapt naar onder elkaar op smalle schermen. */
 .fxr-zoeker__row {
-	display: flex;
-	flex-wrap: wrap;
-	gap: var(--fxr-gap);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--fxr-gap);
 }
 
 .fxr-zoeker__field {
-	flex: 1 1 200px;
-	min-width: 0;
-}
-
-.fxr-zoeker__label {
-	display: block;
-	margin-bottom: 0.4rem;
+  position: relative;
+  flex: 1 1 200px;
+  min-width: 0;
 }
 
 /* Specifiekere selector (.fxr-zoeker als "voorvoegsel") + !important:
    Flatsome/WooCommerce hebben zelf ook CSS voor input/select, vaak met
    hogere specificiteit, die anders border-radius/border overschrijft. */
-.fxr-zoeker .fxr-zoeker__input,
-.fxr-zoeker .fxr-zoeker__select {
-	width: 100%;
-	box-sizing: border-box;
-	padding: var(--fxr-input-padding);
-	font-size: var(--fxr-font-size);
-	-webkit-appearance: none;
-	appearance: none;
-	border: 1px solid var(--fxr-border-color) !important;
-	border-radius: var(--fxr-border-radius) !important;
-	background-color: var(--fxr-input-bg);
+.fxr-zoeker .fxr-combobox {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--fxr-input-bg);
+  border: 1px solid transparent;
+  border-radius: var(--fx-r);
+  padding: 6px 6px 6px 20px;
+  box-shadow: 0 14px 34px rgba(27, 32, 22, 0.22);
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
 }
 
-.fxr-zoeker__input:focus,
-.fxr-zoeker__select:focus {
-	outline: none;
-	border-color: var(--fxr-accent);
+.fxr-zoeker .fxr-combobox:focus-within {
+  border-color: var(--fx-green);
+  box-shadow:
+    0 14px 34px rgba(27, 32, 22, 0.22),
+    0 0 0 3px rgba(95, 132, 16, 0.28);
+}
+
+.fxr-zoeker .fxr-zoeker__input {
+  flex: 1 1 auto;
+  width: auto !important;
+  min-width: 0;
+  margin: 0 !important;
+  padding: 0.85rem 0.25rem !important;
+  height: auto !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  font:
+    600 var(--fxr-font-size)/1.2 Figtree,
+    sans-serif;
+  color: var(--fx-dark);
+  -webkit-appearance: none;
+  appearance: none;
+}
+.fxr-zoeker .fxr-zoeker__input:focus {
+  outline: 0 !important;
+  box-shadow: none !important;
+}
+.fxr-zoeker .fxr-zoeker__input::placeholder {
+  color: var(--fx-muted);
+  font-weight: 500;
+}
+
+.fxr-zoeker .fxr-zoeker__select {
+  display: block;
+  width: 100% !important;
+  height: auto !important;
+  margin: 0 !important;
+  padding: var(--fxr-input-padding) !important;
+  padding-right: 2.5rem !important;
+  background: var(--fxr-input-bg) !important;
+  border: 1px solid var(--fxr-border-color) !important;
+  border-radius: var(--fxr-border-radius) !important;
+  box-shadow: none !important;
+  font:
+    500 var(--fxr-font-size)/1.2 Figtree,
+    sans-serif;
+  color: var(--fx-dark);
+  -webkit-appearance: none;
+  appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--fx-muted) 50%),
+    linear-gradient(135deg, var(--fx-muted) 50%, transparent 50%);
+  background-position:
+    right 1.15rem center,
+    right 0.85rem center;
+  background-size:
+    6px 6px,
+    6px 6px;
+  background-repeat: no-repeat;
+}
+.fxr-zoeker .fxr-zoeker__select:focus {
+  outline: 0 !important;
+  border-color: var(--fx-green) !important;
+  box-shadow: 0 0 0 3px rgba(95, 132, 16, 0.25) !important;
 }
 
 .fxr-zoeker__input:disabled,
 .fxr-zoeker__select:disabled {
-	background-color: var(--fxr-disabled-bg);
-	color: var(--fxr-disabled-color);
-	cursor: not-allowed;
+  background-color: var(--fxr-disabled-bg) !important;
+  color: var(--fxr-disabled-color);
+  cursor: not-allowed;
+}
+.fxr-zoeker .fxr-combobox:has(.fxr-zoeker__input:disabled) {
+  background: var(--fxr-disabled-bg);
+  box-shadow: none;
 }
 
 /* Combobox (mode "autocomplete"): tekstveld + voorstellenlijst eronder. */
 .fxr-zoeker__field--autocomplete {
-	max-width: 420px;
+  max-width: 420px;
 }
 
 .fxr-combobox {
-	position: relative;
+  position: relative;
 }
 
 .fxr-combobox__listbox {
-	position: absolute;
-	z-index: 20;
-	top: calc(100% + 4px);
-	left: 0;
-	right: 0;
-	margin: 0;
-	padding: 0.25rem;
-	list-style: none;
-	max-height: 280px;
-	overflow-y: auto;
-	background: var(--fxr-listbox-bg);
-	border: 1px solid var(--fxr-border-color);
-	border-radius: var(--fxr-border-radius);
-	box-shadow: var(--fxr-listbox-shadow);
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 10px);
+  z-index: 30;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  max-height: 360px;
+  overflow-y: auto;
+  background: var(--fxr-listbox-bg);
+  border-radius: var(--fx-r);
+  box-shadow: var(--fx-shadow);
+  color: var(--fx-dark);
+}
+.fxr-combobox__option {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0.85rem 1.25rem;
+  border-radius: 0;
+  border-bottom: 1px solid rgba(27, 32, 22, 0.06);
+  cursor: pointer;
+}
+.fxr-combobox__option:last-child {
+  border-bottom: 0;
+}
+.fxr-combobox__option.is-actief,
+.fxr-combobox__option[aria-selected="true"],
+.fxr-combobox__option:hover {
+  background-color: var(--fxr-option-hover-bg);
+}
+.fxr-combobox__name mark {
+  background: var(--fx-mint);
+  color: var(--fx-green-dark);
+  border-radius: 3px;
+  padding: 0 2px;
 }
 
 .fxr-combobox__listbox[hidden] {
-	display: none;
-}
-
-.fxr-combobox__option {
-	display: flex;
-	flex-direction: column;
-	padding: 0.5rem 0.6rem;
-	border-radius: 4px;
-	cursor: pointer;
+  display: none;
 }
 
 .fxr-combobox__option.is-active,
 .fxr-combobox__option:hover {
-	background-color: var(--fxr-option-hover-bg);
+  background-color: var(--fxr-option-hover-bg);
 }
 
 .fxr-combobox__name {
-	font-weight: var(--fxr-option-name-weight);
+  font-weight: var(--fxr-option-name-weight);
 }
 
 .fxr-combobox__breadcrumb {
-	font-size: 0.85rem;
-	color: var(--fxr-breadcrumb-color);
+  font-size: 0.85rem;
+  color: var(--fxr-breadcrumb-color);
 }
 
 .fxr-combobox__empty {
-	padding: 0.5rem 0.6rem;
-	color: var(--fxr-disabled-color);
-	font-size: 0.9rem;
+  padding: 0.5rem 0.6rem;
+  color: var(--fxr-disabled-color);
+  font-size: 0.9rem;
 }
 
 .fxr-zoeker__status {
-	margin-top: 0.5rem;
-	font-size: 0.9rem;
-	color: var(--fxr-status-color);
-	min-height: 1.2em;
-	display: flex;
-	align-items: center;
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+  color: var(--fxr-status-color);
+  min-height: 1.2em;
+  display: flex;
+  align-items: center;
 }
 
 /* Draaiend Fixxar-tandwiel i.p.v. "Zoeken..."-tekst tijdens het zoeken.
-   Kleur volgt --fxr-accent (dezelfde token als de focus-rand), zodat je
+   Kleur volgt --fx-green (dezelfde token als de focus-rand), zodat je
    met één variabele de hele "merkkleur" van een zoeker regelt. Wil je het
    tandwiel een eigen, andere kleur geven dan de focus-rand, zet dan
    --fxr-icon-color los op .fxr-zoeker--inkt / .fxr-zoeker--stofzuiger. */
 .fxr-zoeker__loader {
-	--fxr-icon-color: var(--fxr-accent);
-	display: inline-flex;
-	width: var(--fxr-loader-size);
-	height: var(--fxr-loader-size);
-	margin-right: 0.6rem;
-	flex-shrink: 0;
-	color: var(--fxr-icon-color);
-	animation: fxr-spin 1.2s linear infinite;
+  --fxr-icon-color: var(--fx-green);
+  display: inline-flex;
+  width: var(--fxr-loader-size);
+  height: var(--fxr-loader-size);
+  margin-right: 0.6rem;
+  flex-shrink: 0;
+  color: var(--fxr-icon-color);
+  animation: fxr-spin 1.2s linear infinite;
 }
 
 .fxr-zoeker__loader[hidden] {
-	display: none;
+  display: none;
 }
 
 .fxr-zoeker__loader svg {
-	width: 100%;
-	height: 100%;
+  width: 100%;
+  height: 100%;
 }
 
 @keyframes fxr-spin {
-	from {
-		transform: rotate(0deg);
-	}
+  from {
+    transform: rotate(0deg);
+  }
 
-	to {
-		transform: rotate(360deg);
-	}
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .fxr-zoeker__grid {
-	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-	gap: var(--fxr-gap);
-	margin-top: 1rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: var(--fxr-gap);
+  margin-top: 1rem;
 }
 
 .fxr-zoeker__card {
-	display: block;
-	text-decoration: none;
-	color: inherit;
-	border: 1px solid var(--fxr-card-border);
-	border-radius: var(--fxr-card-radius);
-	padding: 0.75rem;
-	transition: box-shadow 0.15s ease;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border: 1px solid var(--fxr-card-border);
+  border-radius: var(--fxr-card-radius);
+  padding: 0.75rem;
+  transition: border-color 0.15s;
 }
-
 .fxr-zoeker__card:hover {
-	box-shadow: var(--fxr-card-shadow-hover);
+  border-color: var(--fx-green-lime);
+  box-shadow: var(--fxr-card-shadow-hover);
 }
-
 .fxr-zoeker__card-img {
-	width: 100%;
-	height: auto;
-	border-radius: 4px;
-	margin-bottom: 0.5rem;
+  aspect-ratio: 1/1;
+  object-fit: contain;
+  background: #fbfbf8;
+}
+.fxr-zoeker__card-price {
+  margin-top: auto;
+  font:
+    900 0.875rem Figtree,
+    sans-serif;
 }
 
 .fxr-zoeker__card-title {
-	/* Bewust geen font-size/font-weight hier: dit is een <h3>, die volgt
-	   automatisch de kopstijl van je thema. */
-	margin: 0 0 0.25rem;
-}
-
-.fxr-zoeker__card-price {
-	font-size: 0.9rem;
-	color: var(--fxr-card-price-color);
-}
-
-.fxr-zoeker__card-stock {
-	font-size: 0.8rem;
-	color: var(--fxr-card-stock-color);
-	margin-top: 0.25rem;
+  margin: 0 0 0.25rem;
+  font-family: Figtree, sans-serif;
+  font-weight: 600;
+  line-height: 1.2;
+  font-size: 1rem;
 }
