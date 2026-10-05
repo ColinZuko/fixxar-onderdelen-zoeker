@@ -467,6 +467,7 @@ function fxr_ajax_zoek_onderdelen() {
 	wp_send_json_success(
 		array(
 			'products' => $products_data,
+			'html'     => fxr_render_products_html( wp_list_pluck( $products_data, 'id' ) ),
 			'message'  => empty( $products_data ) ? 'Geen onderdelen gevonden voor "' . esc_html( $nummer ) . '".' : '',
 		)
 	);
@@ -635,6 +636,7 @@ function fxr_ajax_zoek_op_model() {
 	wp_send_json_success(
 		array(
 			'products' => $products_data,
+			'html'     => fxr_render_products_html( wp_list_pluck( $products_data, 'id' ) ),
 			'message'  => empty( $products_data ) ? 'Geen onderdelen gevonden voor "' . esc_html( $term->name ) . '".' : '',
 		)
 	);
@@ -683,6 +685,65 @@ function fxr_get_products_data_by_terms( $taxonomy, $term_ids ) {
 	}
 
 	return $products_data;
+}
+
+/**
+ * Helper: render de gevonden producten met de échte WooCommerce-productloop
+ * (content-product.php van het thema, bij jou die van Flatsome). Zo zien de
+ * kaarten in de zoeker er precies hetzelfde uit als in de shop en op de
+ * zoekresultatenpagina: zelfde afbeelding-hover, badges, prijs, knoppen,
+ * wishlist-icoon, enzovoort. Instellingen uit de Customizer (Shop → Product
+ * Card) gelden dus automatisch ook hier.
+ *
+ * De volgorde van $product_ids blijft behouden (orderby post__in).
+ */
+function fxr_render_products_html( $product_ids ) {
+	if ( empty( $product_ids ) || ! function_exists( 'wc_get_template_part' ) ) {
+		return '';
+	}
+
+	$query = new WP_Query(
+		array(
+			'post_type'           => 'product',
+			'post_status'         => 'publish',
+			'post__in'            => array_map( 'absint', $product_ids ),
+			'orderby'             => 'post__in',
+			'posts_per_page'      => count( $product_ids ),
+			'ignore_sticky_posts' => true,
+			'no_found_rows'       => true,
+		)
+	);
+
+	if ( ! $query->have_posts() ) {
+		return '';
+	}
+
+	// Loop-eigenschappen zetten zoals een WooCommerce-shortcode dat doet.
+	// 'columns' bepaalt de Flatsome-kolomclasses; in de zoeker overschrijft
+	// fxr-zoeker.css de breedte toch met een eigen responsive grid.
+	wc_setup_loop(
+		array(
+			'name'         => 'fxr_zoeker',
+			'columns'      => 3,
+			'is_shortcode' => true,
+			'is_paginated' => false,
+			'total'        => $query->post_count,
+		)
+	);
+
+	ob_start();
+
+	woocommerce_product_loop_start();
+	while ( $query->have_posts() ) {
+		$query->the_post(); // Zet via WooCommerce ook de globale $product.
+		wc_get_template_part( 'content', 'product' );
+	}
+	woocommerce_product_loop_end();
+
+	wp_reset_postdata();
+	wc_reset_loop();
+
+	return ob_get_clean();
 }
 
 /**

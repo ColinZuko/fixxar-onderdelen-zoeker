@@ -38,7 +38,7 @@
 	   ieder ander Flatsome-element (tekst, afbeelding, etc.). */
   position: relative;
   padding: clamp(24px, 4vw, 44px);
-  border-radius: 10px;
+  border-radius: 8px;
   color: #fff;
   background-color: var(--fx-green);
   background-image:
@@ -53,14 +53,19 @@
       transparent 100%
     );
   background-repeat: no-repeat;
+  /* Flex-kolom: zo kan de inhoud verticaal gecentreerd worden en kan het
+     resultatenblok de resterende hoogte pakken (zie "Lay-out in kolom"). */
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
 
   /* --- Design tokens (standaardwaarden) --- */
   --fx-green: #5f8410; /* Iconen, focus-rand, hover-accenten — geschat "fixxar-groen", zet op je eigen merkkleur. */
   --fxr-gap: 1rem; /* Ruimte tussen velden/kaarten. */
   --fxr-font-size: 1rem; /* Tekstgrootte in velden. */
   --fxr-border-color: #ccc; /* Rand van in-/select-velden en voorstellenlijst. */
-  --fxr-border-radius: 6px;
-  --fxr-border-radius-alt: 6px 6px 0 0; /* Hoekafronding van velden en voorstellenlijst. */
+  --fxr-border-radius: 0;
+  --fxr-border-radius-alt: 0 0 0 0; /* Hoekafronding van velden en voorstellenlijst. */
   --fxr-input-bg: #fff; /* Achtergrond van in-/select-velden. */
   --fxr-input-padding: 0.75rem 1rem; /* Binnenruimte van in-/select-velden. */
   --fxr-disabled-bg: #f5f5f5; /* Achtergrond van uitgeschakelde velden. */
@@ -73,7 +78,7 @@
   --fxr-option-name-weight: 600; /* Dikte van de modelnaam in een voorstel. */
   --fxr-breadcrumb-color: #777; /* Kleur van "Merk › Serie" onder een voorstel. */
   --fxr-card-border: #eee; /* Randkleur van een productkaart. */
-  --fxr-card-radius: 8px; /* Hoekafronding van een productkaart. */
+  --fxr-card-radius: 0; /* Hoekafronding van een productkaart. */
   --fxr-card-shadow-hover: 0 2px 10px rgba(0, 0, 0, 0.08); /* Schaduw bij hover over een productkaart. */
   --fxr-card-price-color: #333; /* Kleur van de prijs op een productkaart. */
   --fxr-card-stock-color: #c0392b;
@@ -100,7 +105,7 @@
 .fxr-zoeker__categorieen {
   display: flex;
   gap: 9px;
-  margin: 24px 0 14px;
+  margin: 28px 0 18px;
 }
 
 .fxr-zoeker__categorie-knop {
@@ -110,7 +115,7 @@
   border-radius: 100px;
   padding: 10px 20px;
   font:
-    700 13.5px Figtree,
+    700 13.5px public-sans,
     sans-serif;
   cursor: pointer;
   transition: all 0.15s;
@@ -127,7 +132,7 @@
 }
 
 .fxr-zoeker__eyebrow {
-  margin: 0 0 0.35rem;
+  margin: 0; /* in de flex-kolom vallen marges niet meer samen met de titel */
   font-size: 0.875rem;
   font-weight: 700;
   letter-spacing: 0.06em;
@@ -137,7 +142,7 @@
 
 .fxr-zoeker__title {
   font:
-    900 32px/1.02 Figtree,
+    900 clamp(28px, 2.4vw, 38px) / 1.05 public-sans,
     sans-serif;
   letter-spacing: -0.035em;
   margin: 14px 0 0 0;
@@ -194,7 +199,7 @@
   background: transparent !important;
   box-shadow: none !important;
   font:
-    600 var(--fxr-font-size)/1.2 Figtree,
+    600 var(--fxr-font-size)/1.2 public-sans,
     sans-serif;
   color: var(--fx-dark);
   -webkit-appearance: none;
@@ -221,7 +226,7 @@
   border-radius: var(--fxr-border-radius) !important;
   box-shadow: none !important;
   font:
-    500 var(--fxr-font-size)/1.2 Figtree,
+    500 var(--fxr-font-size)/1.2 public-sans,
     sans-serif;
   color: var(--fx-dark);
   -webkit-appearance: none;
@@ -256,7 +261,8 @@
 
 /* Combobox (mode "autocomplete"): tekstveld + voorstellenlijst eronder. */
 .fxr-zoeker__field--autocomplete {
-  max-width: 420px;
+  flex: 0 0 auto; /* niet de .fxr-zoeker__field flex-basis erven in de kolom */
+  max-width: 680px; /* zelfde breedte als titel en knoppen: één strakke lijn */
 }
 
 .fxr-combobox {
@@ -378,35 +384,238 @@
   margin-top: 1rem;
 }
 
+/* Fixxar Onderdelen Zoeker — verbeterde productkaarten
+ * ===================================================================
+ * Dit vervangt ALLEEN de volgende bestaande regels in je stylesheet:
+ *   .fxr-zoeker__card
+ *   .fxr-zoeker__card:hover
+ *   .fxr-zoeker__card-img
+ *   .fxr-zoeker__card-price
+ *   .fxr-zoeker__card-title
+ * en voegt één nieuwe, optionele regel toe: .fxr-zoeker__card-stock
+ *
+ * De rest van je bestand (velden, combobox, categorieknoppen, etc.)
+ * blijft ongewijzigd — die hoef je niet aan te raken.
+ *
+ * Twee tokens bovenaan je bestand pas ik in gedachten iets aan (zet ze
+ * zelf even bij --fxr-card-radius en --fxr-card-shadow-hover):
+ *   --fxr-card-radius: 14px;   (was 0 — nu gebruikt, was voorheen dood)
+ *   --fxr-card-shadow-hover: 0 18px 34px rgba(27, 32, 22, 0.16);
+ */
+
 .fxr-zoeker__card {
+  position: relative;
   display: flex;
   flex-direction: column;
+  overflow: hidden; /* NIEUW: knipt de afbeelding netjes af binnen de ronde hoeken */
   background: #fff;
-  border: 1px solid var(--fxr-card-border);
-  border-radius: var(--fxr-card-radius);
-  padding: 0.75rem;
-  transition: border-color 0.15s;
+  border: 1px solid var(--fxr-card-border); /* NIEUW: gebruikt je eigen token i.p.v. harde zwarte rand */
+  border-radius: 8px;
+  padding: 0; /* NIEUW: padding verhuist naar een losse content-laag hieronder */
+  box-shadow: 0 1px 3px rgba(27, 32, 22, 0.06); /* NIEUW: zachte schaduw in rust i.p.v. niets */
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
 }
+
 .fxr-zoeker__card:hover {
+  transform: translateY(
+    -4px
+  ); /* NIEUW: lichte "optil" animatie, zelfde gevoel als je dienst-cards */
   border-color: var(--fx-green-lime);
   box-shadow: var(--fxr-card-shadow-hover);
 }
+
 .fxr-zoeker__card-img {
   aspect-ratio: 1/1;
   object-fit: contain;
   background: #fbfbf8;
+  margin: 0; /* NIEUW: geen losse marge meer, vult nu de volle breedte */
+  padding: 1rem 0.75rem 0.5rem; /* NIEUW: ruimte binnen de afbeelding-laag zelf (i.p.v. op de card) */
+  width: 100%;
 }
-.fxr-zoeker__card-price {
-  margin-top: auto;
-  font:
-    900 0.875rem Figtree,
-    sans-serif;
+
+/* NIEUW: wrapper voor titel + prijs, zodat zij wél de padding hebben
+   die eerst op de hele card stond. Zet deze div/span dus om je titel
+   + prijs samen in je HTML, met class "fxr-zoeker__card-body".
+   Heb je die wrapper niet en wil je 'm niet toevoegen? Zet dan
+   ".fxr-zoeker__card-img { padding: 0.75rem; }" terug en laat deze
+   regel weg — dan blijft de oude "nette rand rondom alles"-look, maar
+   zonder de edge-to-edge afbeelding. */
+.fxr-zoeker__card-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  padding: 0 0.9rem 0.9rem;
 }
 
 .fxr-zoeker__card-title {
-  margin: 0 0 0.25rem;
-  font-family: Figtree, sans-serif;
+  margin: 0 0 0.3rem;
+  font-family: public-sans, sans-serif;
   font-weight: 600;
-  line-height: 1.2;
-  font-size: 1rem;
+  line-height: 1.25;
+  font-size: 0.95rem;
+  color: var(--fx-dark); /* NIEUW: expliciete kleur i.p.v. impliciet erven */
+  display: -webkit-box; /* NIEUW: kapt lange titels netjes af na 2 regels */
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.fxr-zoeker__card-price {
+  margin-top: auto;
+  padding-top: 0.4rem;
+  font:
+    900 1.05rem public-sans,
+    /* NIEUW: groter, steviger */ sans-serif;
+  color: var(--fxr-card-price-color);
+}
+
+.fxr-zoeker__card-stock {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--fx-green);
+}
+.fxr-zoeker__card-stock::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.fxr-zoeker__card-stock--uit {
+  color: var(--fxr-card-stock-color);
+}
+
+.fxr-zoeker__status-text {
+  color: var(--fxr-input-bg);
+}
+
+/* ===================================================================
+ * Lay-out in kolom: even hoog als de buurkolom + scrollende resultaten
+ * ===================================================================
+ * Werkt in een Flatsome-row met Vertical Align "Equal" (class align-equal).
+ * Staat de zoeker in een andere row, dan groeit hij gewoon mee met zijn
+ * inhoud zoals voorheen.
+ */
+
+/* 1. Kolom die de zoeker bevat: .col-inner wordt een flex-kolom die de
+      volle hoogte van de (gelijk-hoge) kolom vult. */
+.row.align-equal > .col:has(.fxr-zoeker) {
+  display: flex;
+}
+.row.align-equal > .col > .col-inner:has(.fxr-zoeker) {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+/* Zoeker (of een wrapper eromheen, bv. een UX Builder Text-element)
+   neemt alle hoogte van de kolom in. */
+.row.align-equal > .col > .col-inner > .fxr-zoeker,
+.row.align-equal > .col > .col-inner > :has(.fxr-zoeker) {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 0;
+}
+.row.align-equal > .col > .col-inner > :has(.fxr-zoeker) > .fxr-zoeker {
+  flex: 1 1 auto;
+}
+
+/* 2. Nog geen resultaten: alles verticaal in het midden, en het lege
+      resultatenblok neemt geen ruimte in. */
+.fxr-zoeker:not(:has(.fxr-zoeker__results > *)) {
+  justify-content: center;
+}
+.fxr-zoeker:not(:has(.fxr-zoeker__results > *)) .fxr-zoeker__results {
+  display: none;
+}
+
+/* 3. Wel resultaten: het resultatenblok vult de rest van de hoogte en
+      scrolt als er meer kaarten zijn dan past. height: 0 zorgt dat de
+      kaarten zelf de row niet hoger maken; alleen de linkerkolom bepaalt
+      de hoogte. min-height is de ondergrens als links heel kort is. */
+.row.align-equal .fxr-zoeker__results {
+  flex: 1 1 auto;
+  height: 0;
+  min-height: 260px;
+  overflow-y: auto;
+  overscroll-behavior: contain; /* pagina scrolt niet mee aan het eind */
+  padding: 6px 6px 6px; /* ruimte voor de optil-hover en schaduw */
+  margin: 0 -6px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.5) transparent;
+}
+.row.align-equal .fxr-zoeker__results .fxr-zoeker__grid {
+  margin-top: 0.5rem;
+}
+
+/* Mobiel/tablet: Flatsome stapelt de kolommen, dus er is geen
+   "restruimte". Dan een eigen maximale hoogte. */
+@media (max-width: 849px) {
+  .row.align-equal .fxr-zoeker__results {
+    height: auto;
+    min-height: 0;
+    max-height: 70vh;
+  }
+}
+
+/* ===================================================================
+ * WooCommerce-productkaarten in de zoeker
+ * ===================================================================
+ * De resultaten worden gerenderd met de echte WooCommerce/Flatsome-
+ * productloop (content-product.php), dus de kaarten zelf krijgen hun
+ * styling van het thema, net als in de shop. Hier regelen we alleen:
+ *  - de kolommen: een grid dat zich aanpast aan de breedte van de zoeker,
+ *    in plaats van Flatsome's vaste large-columns-X percentages;
+ *  - een witte achtergrond per kaart, omdat Flatsome-kaarten transparant
+ *    zijn en de donkere tekst anders op het groen staat.
+ */
+.fxr-zoeker__results .products.row {
+  display: grid;
+  /* Maximaal 3 kolommen: een kolom is nooit smaller dan 1/3 van de breedte
+     (min. 170px). Is de zoeker smaller, dan vallen er vanzelf kolommen af
+     (3 → 2 → 1). */
+  grid-template-columns: repeat(
+    auto-fill,
+    minmax(max(170px, calc((100% - 2 * var(--fxr-gap)) / 3)), 1fr)
+  );
+  gap: var(--fxr-gap);
+  margin: 0.5rem 0 0 !important;
+  width: auto;
+}
+
+.fxr-zoeker__results .products.row > .product-small.col {
+  width: auto !important;
+  max-width: none !important;
+  flex-basis: auto !important;
+  padding: 0 !important;
+  margin: 0;
+}
+
+.fxr-zoeker__results .products.row > .product-small.col > .col-inner {
+  height: 100%;
+  background: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+  color: var(--fx-dark);
+  box-shadow: 0 1px 3px rgba(27, 32, 22, 0.06);
+}
+
+/* Tekstgedeelte iets van de rand af, zoals in een kaart hoort. */
+.fxr-zoeker__results .product-small .box-text {
+  padding-left: 0.9rem;
+  padding-right: 0.9rem;
+}
+
+/* Wit label en links in de zoeker (kleur #fff) niet laten doorlekken
+   naar de kaarten. */
+.fxr-zoeker__results .product-small a {
+  color: inherit;
 }

@@ -1,412 +1,502 @@
-( function () {
-	'use strict';
+(function () {
+  "use strict";
 
-	function debounce( fn, wait ) {
-		var timer;
-		return function () {
-			var args = arguments;
-			var ctx = this;
-			clearTimeout( timer );
-			timer = setTimeout( function () {
-				fn.apply( ctx, args );
-			}, wait );
-		};
-	}
+  function debounce(fn, wait) {
+    var timer;
+    return function () {
+      var args = arguments;
+      var ctx = this;
+      clearTimeout(timer);
+      timer = setTimeout(function () {
+        fn.apply(ctx, args);
+      }, wait);
+    };
+  }
 
-	function escapeHtml( str ) {
-		var div = document.createElement( 'div' );
-		div.textContent = str;
-		return div.innerHTML;
-	}
+  function escapeHtml(str) {
+    var div = document.createElement("div");
+    div.textContent = str;
+    return div.innerHTML;
+  }
 
-	function renderResults( container, products ) {
-		if ( ! products.length ) {
-			container.innerHTML = '';
-			return;
-		}
+  /**
+   * Toon de resultaten. Stuurt de server kant-en-klare WooCommerce-HTML
+   * mee (data.html, gerenderd met content-product.php van het thema), dan
+   * gebruiken we die, zodat de kaarten er net zo uitzien als in de shop.
+   * Anders vallen we terug op onze eigen, simpele kaarten.
+   */
+  function renderResults(container, products, html) {
+    if (!products.length) {
+      container.innerHTML = "";
+      return;
+    }
 
-		var html = '<div class="fxr-zoeker__grid">';
-		products.forEach( function ( p ) {
-			html +=
-				'<a class="fxr-zoeker__card" href="' + p.permalink + '">' +
-					'<img class="fxr-zoeker__card-img" src="' + p.image + '" alt="' + escapeHtml( p.title ) + '" loading="lazy" />' +
-					'<div class="fxr-zoeker__card-body">' +
-						'<h3 class="fxr-zoeker__card-title">' + escapeHtml( p.title ) + '</h3>' +
-						'<div class="fxr-zoeker__card-price">' + p.price_html + '</div>' +
-						( p.in_stock ? '' : '<div class="fxr-zoeker__card-stock">Niet op voorraad</div>' ) +
-					'</div>' +
-				'</a>';
-		} );
-		html += '</div>';
-		container.innerHTML = html;
-	}
+    if (html) {
+      container.innerHTML = html;
+      activeerThemaScripts(container);
+      return;
+    }
 
-	function setOptions( select, items, placeholder ) {
-		var html = '<option value="">' + escapeHtml( placeholder ) + '</option>';
-		items.forEach( function ( item ) {
-			html += '<option value="' + item.id + '">' + escapeHtml( item.name ) + '</option>';
-		} );
-		select.innerHTML = html;
-	}
+    var html = '<div class="fxr-zoeker__grid">';
+    products.forEach(function (p) {
+      html +=
+        '<a class="fxr-zoeker__card" href="' +
+        p.permalink +
+        '">' +
+        '<img class="fxr-zoeker__card-img" src="' +
+        p.image +
+        '" alt="' +
+        escapeHtml(p.title) +
+        '" loading="lazy" />' +
+        '<div class="fxr-zoeker__card-body">' +
+        '<h3 class="fxr-zoeker__card-title">' +
+        escapeHtml(p.title) +
+        "</h3>" +
+        '<div class="fxr-zoeker__card-price">' +
+        p.price_html +
+        "</div>" +
+        (p.in_stock
+          ? ""
+          : '<div class="fxr-zoeker__card-stock">Niet op voorraad</div>') +
+        "</div>" +
+        "</a>";
+    });
+    html += "</div>";
+    container.innerHTML = html;
+  }
 
-	function ajax( action, params ) {
-		var body = new URLSearchParams();
-		body.append( 'action', action );
-		body.append( 'nonce', fxrZoeker.nonce );
-		Object.keys( params ).forEach( function ( key ) {
-			body.append( key, params[ key ] );
-		} );
+  /**
+   * Nieuw ingeladen HTML "wakker maken" voor Flatsome en WooCommerce:
+   * lazy-load-afbeeldingen, quick view, tooltips en dergelijke draaien
+   * normaal alleen bij het laden van de pagina.
+   */
+  function activeerThemaScripts(container) {
+    try {
+      if (window.Flatsome && typeof window.Flatsome.attach === "function") {
+        window.Flatsome.attach(container);
+      }
+    } catch (e) {
+      // Geen ramp: de kaarten werken ook zonder.
+    }
 
-		return fetch( fxrZoeker.ajaxUrl, {
-			method: 'POST',
-			credentials: 'same-origin',
-			body: body,
-		} ).then( function ( res ) {
-			return res.json();
-		} );
-	}
+    // Lazy-load vangnet: toon afbeeldingen die nog alleen een data-src hebben.
+    container.querySelectorAll("img[data-src]").forEach(function (img) {
+      if (!img.getAttribute("src") || img.src.indexOf("data:") === 0) {
+        img.src = img.getAttribute("data-src");
+        if (img.getAttribute("data-srcset")) {
+          img.srcset = img.getAttribute("data-srcset");
+        }
+      }
+    });
 
-	/**
-	 * Mode "dropdown": Merk-select -> Serie-select -> modelnummer-invoerveld.
-	 * Ongewijzigd t.o.v. de eerdere versie van deze zoeker.
-	 */
-	function initDropdownZoeker( wrapper ) {
-		var taxonomy = wrapper.getAttribute( 'data-taxonomy' );
-		var minChars = parseInt( wrapper.getAttribute( 'data-min-chars' ), 10 ) || 1;
+    if (window.jQuery) {
+      window
+        .jQuery(document.body)
+        .trigger("fxr_zoeker_results_loaded", [container]);
+    }
+  }
 
-		var merkSelect = wrapper.querySelector( '.fxr-zoeker__select--merk' );
-		var serieSelect = wrapper.querySelector( '.fxr-zoeker__select--serie' );
-		var nummerInput = wrapper.querySelector( '.fxr-zoeker__input--nummer' );
-		var loader = wrapper.querySelector( '.fxr-zoeker__loader' );
-		var statusText = wrapper.querySelector( '.fxr-zoeker__status-text' );
-		var results = wrapper.querySelector( '.fxr-zoeker__results' );
+  function setOptions(select, items, placeholder) {
+    var html = '<option value="">' + escapeHtml(placeholder) + "</option>";
+    items.forEach(function (item) {
+      html +=
+        '<option value="' +
+        item.id +
+        '">' +
+        escapeHtml(item.name) +
+        "</option>";
+    });
+    select.innerHTML = html;
+  }
 
-		function resetResults() {
-			loader.hidden = true;
-			statusText.textContent = '';
-			results.innerHTML = '';
-		}
+  function ajax(action, params) {
+    var body = new URLSearchParams();
+    body.append("action", action);
+    body.append("nonce", fxrZoeker.nonce);
+    Object.keys(params).forEach(function (key) {
+      body.append(key, params[key]);
+    });
 
-		function resetSerieAndNummer() {
-			serieSelect.disabled = true;
-			setOptions( serieSelect, [], 'Kies eerst een merk...' );
-			nummerInput.disabled = true;
-			nummerInput.value = '';
-			resetResults();
-		}
+    return fetch(fxrZoeker.ajaxUrl, {
+      method: "POST",
+      credentials: "same-origin",
+      body: body,
+    }).then(function (res) {
+      return res.json();
+    });
+  }
 
-		// Stap 1: Merk gekozen -> series ophalen.
-		merkSelect.addEventListener( 'change', function () {
-			var merkId = merkSelect.value;
-			resetSerieAndNummer();
+  /**
+   * Mode "dropdown": Merk-select -> Serie-select -> modelnummer-invoerveld.
+   * Ongewijzigd t.o.v. de eerdere versie van deze zoeker.
+   */
+  function initDropdownZoeker(wrapper) {
+    var taxonomy = wrapper.getAttribute("data-taxonomy");
+    var minChars = parseInt(wrapper.getAttribute("data-min-chars"), 10) || 1;
 
-			if ( ! merkId ) {
-				return;
-			}
+    var merkSelect = wrapper.querySelector(".fxr-zoeker__select--merk");
+    var serieSelect = wrapper.querySelector(".fxr-zoeker__select--serie");
+    var nummerInput = wrapper.querySelector(".fxr-zoeker__input--nummer");
+    var loader = wrapper.querySelector(".fxr-zoeker__loader");
+    var statusText = wrapper.querySelector(".fxr-zoeker__status-text");
+    var results = wrapper.querySelector(".fxr-zoeker__results");
 
-			setOptions( serieSelect, [], 'Laden...' );
+    function resetResults() {
+      loader.hidden = true;
+      statusText.textContent = "";
+      results.innerHTML = "";
+    }
 
-			ajax( 'fxr_get_series', { taxonomy: taxonomy, merk_id: merkId } )
-				.then( function ( json ) {
-					if ( ! json.success || ! json.data.series.length ) {
-						setOptions( serieSelect, [], 'Geen series gevonden' );
-						return;
-					}
-					setOptions( serieSelect, json.data.series, 'Kies een serie...' );
-					serieSelect.disabled = false;
-				} )
-				.catch( function () {
-					setOptions( serieSelect, [], 'Er ging iets mis' );
-				} );
-		} );
+    function resetSerieAndNummer() {
+      serieSelect.disabled = true;
+      setOptions(serieSelect, [], "Kies eerst een merk...");
+      nummerInput.disabled = true;
+      nummerInput.value = "";
+      resetResults();
+    }
 
-		// Stap 2: Serie gekozen -> nummerveld vrijgeven.
-		serieSelect.addEventListener( 'change', function () {
-			nummerInput.value = '';
-			resetResults();
-			nummerInput.disabled = ! serieSelect.value;
-			if ( ! nummerInput.disabled ) {
-				nummerInput.focus();
-			}
-		} );
+    // Stap 1: Merk gekozen -> series ophalen.
+    merkSelect.addEventListener("change", function () {
+      var merkId = merkSelect.value;
+      resetSerieAndNummer();
 
-		// Stap 3: Nummer typen -> zoeken binnen gekozen merk + serie.
-		var doSearch = debounce( function () {
-			var serieId = serieSelect.value;
-			var nummer = nummerInput.value.trim();
+      if (!merkId) {
+        return;
+      }
 
-			if ( ! serieId || nummer.length < minChars ) {
-				resetResults();
-				return;
-			}
+      setOptions(serieSelect, [], "Laden...");
 
-			loader.hidden = false;
-			statusText.textContent = '';
+      ajax("fxr_get_series", { taxonomy: taxonomy, merk_id: merkId })
+        .then(function (json) {
+          if (!json.success || !json.data.series.length) {
+            setOptions(serieSelect, [], "Geen series gevonden");
+            return;
+          }
+          setOptions(serieSelect, json.data.series, "Kies een serie...");
+          serieSelect.disabled = false;
+        })
+        .catch(function () {
+          setOptions(serieSelect, [], "Er ging iets mis");
+        });
+    });
 
-			ajax( 'fxr_zoek_onderdelen', { taxonomy: taxonomy, serie_id: serieId, nummer: nummer } )
-				.then( function ( json ) {
-					loader.hidden = true;
+    // Stap 2: Serie gekozen -> nummerveld vrijgeven.
+    serieSelect.addEventListener("change", function () {
+      nummerInput.value = "";
+      resetResults();
+      nummerInput.disabled = !serieSelect.value;
+      if (!nummerInput.disabled) {
+        nummerInput.focus();
+      }
+    });
 
-					if ( ! json.success ) {
-						statusText.textContent = 'Er ging iets mis, probeer het opnieuw.';
-						results.innerHTML = '';
-						return;
-					}
+    // Stap 3: Nummer typen -> zoeken binnen gekozen merk + serie.
+    var doSearch = debounce(function () {
+      var serieId = serieSelect.value;
+      var nummer = nummerInput.value.trim();
 
-					var data = json.data;
-					statusText.textContent = data.message || ( data.products.length + ' onderdelen gevonden' );
-					renderResults( results, data.products );
-				} )
-				.catch( function () {
-					loader.hidden = true;
-					statusText.textContent = 'Er ging iets mis, probeer het opnieuw.';
-				} );
-		}, 350 );
+      if (!serieId || nummer.length < minChars) {
+        resetResults();
+        return;
+      }
 
-		nummerInput.addEventListener( 'input', doSearch );
-	}
+      loader.hidden = false;
+      statusText.textContent = "";
 
-	/**
-	 * Mode "autocomplete": één zoekveld + voorstellenlijst (combobox-patroon).
-	 * Belangrijkste regel: resultaten verschijnen alleen nadat de bezoeker
-	 * een voorstel uit de lijst heeft gekozen (klik, Enter of Tab) — nooit
-	 * op basis van los getypte tekst. Zolang er geen geldige keuze is
-	 * vastgelegd, blijft de resultaten-sectie leeg.
-	 */
-	function initAutocompleteZoeker( wrapper ) {
-		// data-taxonomy staat niet per se vast: bij de gecombineerde zoeker
-		// (categorieknoppen "Inkt"/"Stofzuigers") verandert dit attribuut
-		// zodra je van categorie wisselt. Daarom nooit in een variabele
-		// cachen, maar telkens opnieuw opvragen via currentTaxonomy().
-		function currentTaxonomy() {
-			return wrapper.getAttribute( 'data-taxonomy' );
-		}
-		var minChars = parseInt( wrapper.getAttribute( 'data-min-chars' ), 10 ) || 2;
+      ajax("fxr_zoek_onderdelen", {
+        taxonomy: taxonomy,
+        serie_id: serieId,
+        nummer: nummer,
+      })
+        .then(function (json) {
+          loader.hidden = true;
 
-		var input = wrapper.querySelector( '.fxr-zoeker__input--model' );
-		var hiddenModelId = wrapper.querySelector( '.fxr-zoeker__model-id' );
-		var listbox = wrapper.querySelector( '.fxr-combobox__listbox' );
-		var loader = wrapper.querySelector( '.fxr-zoeker__loader' );
-		var statusText = wrapper.querySelector( '.fxr-zoeker__status-text' );
-		var results = wrapper.querySelector( '.fxr-zoeker__results' );
-		var categorieKnoppen = wrapper.querySelectorAll( '.fxr-zoeker__categorie-knop' );
+          if (!json.success) {
+            statusText.textContent = "Er ging iets mis, probeer het opnieuw.";
+            results.innerHTML = "";
+            return;
+          }
 
-		var currentSuggestions = []; // Laatst opgehaalde voorstellen (array van model-objecten).
-		var activeIndex = -1; // Welk voorstel heeft nu het toetsenbord-highlight.
+          var data = json.data;
+          statusText.textContent =
+            data.message || data.products.length + " onderdelen gevonden";
+          renderResults(results, data.products, data.html);
+        })
+        .catch(function () {
+          loader.hidden = true;
+          statusText.textContent = "Er ging iets mis, probeer het opnieuw.";
+        });
+    }, 350);
 
-		function resetResults() {
-			loader.hidden = true;
-			statusText.textContent = '';
-			results.innerHTML = '';
-		}
+    nummerInput.addEventListener("input", doSearch);
+  }
 
-		function closeListbox() {
-			listbox.hidden = true;
-			listbox.innerHTML = '';
-			currentSuggestions = [];
-			activeIndex = -1;
-			input.setAttribute( 'aria-expanded', 'false' );
-			input.removeAttribute( 'aria-activedescendant' );
-		}
+  /**
+   * Mode "autocomplete": één zoekveld + voorstellenlijst (combobox-patroon).
+   * Belangrijkste regel: resultaten verschijnen alleen nadat de bezoeker
+   * een voorstel uit de lijst heeft gekozen (klik, Enter of Tab) — nooit
+   * op basis van los getypte tekst. Zolang er geen geldige keuze is
+   * vastgelegd, blijft de resultaten-sectie leeg.
+   */
+  function initAutocompleteZoeker(wrapper) {
+    // data-taxonomy staat niet per se vast: bij de gecombineerde zoeker
+    // (categorieknoppen "Inkt"/"Stofzuigers") verandert dit attribuut
+    // zodra je van categorie wisselt. Daarom nooit in een variabele
+    // cachen, maar telkens opnieuw opvragen via currentTaxonomy().
+    function currentTaxonomy() {
+      return wrapper.getAttribute("data-taxonomy");
+    }
+    var minChars = parseInt(wrapper.getAttribute("data-min-chars"), 10) || 2;
 
-		function forgetSelection() {
-			// Wordt aangeroepen zodra de klant weer gaat typen: een eerder
-			// gekozen model telt dan niet meer mee, dus resultaten verdwijnen
-			// totdat er opnieuw een voorstel wordt gekozen.
-			hiddenModelId.value = '';
-			resetResults();
-		}
+    var input = wrapper.querySelector(".fxr-zoeker__input--model");
+    var hiddenModelId = wrapper.querySelector(".fxr-zoeker__model-id");
+    var listbox = wrapper.querySelector(".fxr-combobox__listbox");
+    var loader = wrapper.querySelector(".fxr-zoeker__loader");
+    var statusText = wrapper.querySelector(".fxr-zoeker__status-text");
+    var results = wrapper.querySelector(".fxr-zoeker__results");
+    var categorieKnoppen = wrapper.querySelectorAll(
+      ".fxr-zoeker__categorie-knop",
+    );
 
-		function renderSuggestions( items ) {
-			currentSuggestions = items;
-			activeIndex = -1;
+    var currentSuggestions = []; // Laatst opgehaalde voorstellen (array van model-objecten).
+    var activeIndex = -1; // Welk voorstel heeft nu het toetsenbord-highlight.
 
-			if ( ! items.length ) {
-				listbox.innerHTML = '<li class="fxr-combobox__empty" role="presentation">Niets gevonden</li>';
-				listbox.hidden = false;
-				input.setAttribute( 'aria-expanded', 'true' );
-				return;
-			}
+    function resetResults() {
+      loader.hidden = true;
+      statusText.textContent = "";
+      results.innerHTML = "";
+    }
 
-			var html = '';
-			items.forEach( function ( item, index ) {
-				var breadcrumb = [ item.merk, item.serie ].filter( Boolean ).join( ' › ' );
-				html +=
-					'<li role="option" id="fxr-optie-' + index + '" data-index="' + index + '" class="fxr-combobox__option">' +
-						'<span class="fxr-combobox__name">' + escapeHtml( item.name ) + '</span>' +
-						( breadcrumb ? '<span class="fxr-combobox__breadcrumb">' + escapeHtml( breadcrumb ) + '</span>' : '' ) +
-					'</li>';
-			} );
-			listbox.innerHTML = html;
-			listbox.hidden = false;
-			input.setAttribute( 'aria-expanded', 'true' );
-		}
+    function closeListbox() {
+      listbox.hidden = true;
+      listbox.innerHTML = "";
+      currentSuggestions = [];
+      activeIndex = -1;
+      input.setAttribute("aria-expanded", "false");
+      input.removeAttribute("aria-activedescendant");
+    }
 
-		function highlightOption( index ) {
-			var options = listbox.querySelectorAll( '.fxr-combobox__option' );
-			options.forEach( function ( el ) {
-				el.classList.remove( 'is-active' );
-			} );
-			if ( index >= 0 && options[ index ] ) {
-				options[ index ].classList.add( 'is-active' );
-				options[ index ].scrollIntoView( { block: 'nearest' } );
-				input.setAttribute( 'aria-activedescendant', options[ index ].id );
-			} else {
-				input.removeAttribute( 'aria-activedescendant' );
-			}
-			activeIndex = index;
-		}
+    function forgetSelection() {
+      // Wordt aangeroepen zodra de klant weer gaat typen: een eerder
+      // gekozen model telt dan niet meer mee, dus resultaten verdwijnen
+      // totdat er opnieuw een voorstel wordt gekozen.
+      hiddenModelId.value = "";
+      resetResults();
+    }
 
-		function selectSuggestion( index ) {
-			var item = currentSuggestions[ index ];
-			if ( ! item ) {
-				return;
-			}
+    function renderSuggestions(items) {
+      currentSuggestions = items;
+      activeIndex = -1;
 
-			// Zichtbare veldwaarde: gewoon de modelnaam. Merk/serie zie je
-			// terug in de statusregel zodra de resultaten binnen zijn.
-			input.value = item.name;
-			hiddenModelId.value = item.id;
-			closeListbox();
-			zoekProductenVoorModel( item );
-		}
+      if (!items.length) {
+        listbox.innerHTML =
+          '<li class="fxr-combobox__empty" role="presentation">Niets gevonden</li>';
+        listbox.hidden = false;
+        input.setAttribute("aria-expanded", "true");
+        return;
+      }
 
-		function zoekProductenVoorModel( item ) {
-			loader.hidden = false;
-			statusText.textContent = '';
-			results.innerHTML = '';
+      var html = "";
+      items.forEach(function (item, index) {
+        var breadcrumb = [item.merk, item.serie].filter(Boolean).join(" › ");
+        html +=
+          '<li role="option" id="fxr-optie-' +
+          index +
+          '" data-index="' +
+          index +
+          '" class="fxr-combobox__option">' +
+          '<span class="fxr-combobox__name">' +
+          escapeHtml(item.name) +
+          "</span>" +
+          (breadcrumb
+            ? '<span class="fxr-combobox__breadcrumb">' +
+              escapeHtml(breadcrumb) +
+              "</span>"
+            : "") +
+          "</li>";
+      });
+      listbox.innerHTML = html;
+      listbox.hidden = false;
+      input.setAttribute("aria-expanded", "true");
+    }
 
-			ajax( 'fxr_zoek_op_model', { taxonomy: currentTaxonomy(), model_id: item.id } )
-				.then( function ( json ) {
-					loader.hidden = true;
+    function highlightOption(index) {
+      var options = listbox.querySelectorAll(".fxr-combobox__option");
+      options.forEach(function (el) {
+        el.classList.remove("is-active");
+      });
+      if (index >= 0 && options[index]) {
+        options[index].classList.add("is-active");
+        options[index].scrollIntoView({ block: "nearest" });
+        input.setAttribute("aria-activedescendant", options[index].id);
+      } else {
+        input.removeAttribute("aria-activedescendant");
+      }
+      activeIndex = index;
+    }
 
-					if ( ! json.success ) {
-						statusText.textContent = 'Er ging iets mis, probeer het opnieuw.';
-						return;
-					}
+    function selectSuggestion(index) {
+      var item = currentSuggestions[index];
+      if (!item) {
+        return;
+      }
 
-					var breadcrumb = [ item.merk, item.serie, item.name ].filter( Boolean ).join( ' › ' );
-					var data = json.data;
-					statusText.textContent =
-						breadcrumb + ' — ' + ( data.message || ( data.products.length + ' onderdelen gevonden' ) );
-					renderResults( results, data.products );
-				} )
-				.catch( function () {
-					loader.hidden = true;
-					statusText.textContent = 'Er ging iets mis, probeer het opnieuw.';
-				} );
-		}
+      // Zichtbare veldwaarde: gewoon de modelnaam. Merk/serie zie je
+      // terug in de statusregel zodra de resultaten binnen zijn.
+      input.value = item.name;
+      hiddenModelId.value = item.id;
+      closeListbox();
+      zoekProductenVoorModel(item);
+    }
 
-		var zoekVoorstellen = debounce( function () {
-			var q = input.value.trim();
+    function zoekProductenVoorModel(item) {
+      loader.hidden = false;
+      statusText.textContent = "";
+      results.innerHTML = "";
 
-			if ( q.length < minChars ) {
-				closeListbox();
-				return;
-			}
+      ajax("fxr_zoek_op_model", {
+        taxonomy: currentTaxonomy(),
+        model_id: item.id,
+      })
+        .then(function (json) {
+          loader.hidden = true;
 
-			ajax( 'fxr_search_models', { taxonomy: currentTaxonomy(), q: q } )
-				.then( function ( json ) {
-					if ( ! json.success ) {
-						closeListbox();
-						return;
-					}
-					renderSuggestions( json.data.models );
-				} )
-				.catch( function () {
-					closeListbox();
-				} );
-		}, 300 );
+          if (!json.success) {
+            statusText.textContent = "Er ging iets mis, probeer het opnieuw.";
+            return;
+          }
 
-		// Typen: eerdere keuze (indien die er was) laten vallen + nieuwe
-		// voorstellen ophalen. Resultaten blijven leeg totdat er weer
-		// bewust een voorstel wordt gekozen.
-		input.addEventListener( 'input', function () {
-			forgetSelection();
-			zoekVoorstellen();
-		} );
+          var breadcrumb = [item.merk, item.serie, item.name]
+            .filter(Boolean)
+            .join(" › ");
+          var data = json.data;
+          statusText.textContent =
+            breadcrumb +
+            " — " +
+            (data.message || data.products.length + " onderdelen gevonden");
+          renderResults(results, data.products, data.html);
+        })
+        .catch(function () {
+          loader.hidden = true;
+          statusText.textContent = "Er ging iets mis, probeer het opnieuw.";
+        });
+    }
 
-		// Toetsenbord: pijltjes om door de lijst te lopen, Enter om te
-		// kiezen, Escape om te sluiten — zelfde bediening als een native
-		// <select>, maar dan voor onze eigen voorstellenlijst.
-		input.addEventListener( 'keydown', function ( e ) {
-			if ( listbox.hidden || ! currentSuggestions.length ) {
-				return;
-			}
+    var zoekVoorstellen = debounce(function () {
+      var q = input.value.trim();
 
-			if ( 'ArrowDown' === e.key ) {
-				e.preventDefault();
-				highlightOption( Math.min( activeIndex + 1, currentSuggestions.length - 1 ) );
-			} else if ( 'ArrowUp' === e.key ) {
-				e.preventDefault();
-				highlightOption( Math.max( activeIndex - 1, 0 ) );
-			} else if ( 'Enter' === e.key ) {
-				if ( activeIndex >= 0 ) {
-					e.preventDefault();
-					selectSuggestion( activeIndex );
-				}
-			} else if ( 'Escape' === e.key ) {
-				closeListbox();
-			}
-		} );
+      if (q.length < minChars) {
+        closeListbox();
+        return;
+      }
 
-		// Klikken op een voorstel. We gebruiken "mousedown" (niet "click") en
-		// voorkomen het standaardgedrag, zodat het invoerveld zijn focus niet
-		// al kwijtraakt (en de lijst niet al dichtklapt) vóórdat de keuze is
-		// verwerkt.
-		listbox.addEventListener( 'mousedown', function ( e ) {
-			var option = e.target.closest( '.fxr-combobox__option' );
-			if ( ! option ) {
-				return;
-			}
-			e.preventDefault();
-			selectSuggestion( parseInt( option.getAttribute( 'data-index' ), 10 ) );
-		} );
+      ajax("fxr_search_models", { taxonomy: currentTaxonomy(), q: q })
+        .then(function (json) {
+          if (!json.success) {
+            closeListbox();
+            return;
+          }
+          renderSuggestions(json.data.models);
+        })
+        .catch(function () {
+          closeListbox();
+        });
+    }, 300);
 
-		// Ergens anders klikken sluit de voorstellenlijst.
-		document.addEventListener( 'click', function ( e ) {
-			if ( ! wrapper.contains( e.target ) ) {
-				closeListbox();
-			}
-		} );
+    // Typen: eerdere keuze (indien die er was) laten vallen + nieuwe
+    // voorstellen ophalen. Resultaten blijven leeg totdat er weer
+    // bewust een voorstel wordt gekozen.
+    input.addEventListener("input", function () {
+      forgetSelection();
+      zoekVoorstellen();
+    });
 
-		// Categorieknoppen (alleen aanwezig bij de gecombineerde zoeker
-		// [fixxar_zoeker]): wisselen zet de taxonomie om, ververst het
-		// zoekveld en wist de oude resultaten — je begint dus telkens
-		// schoon in de nieuw gekozen categorie.
-		categorieKnoppen.forEach( function ( knop ) {
-			knop.addEventListener( 'click', function () {
-				if ( knop.classList.contains( 'is-actief' ) ) {
-					return; // Al de actieve categorie, niks te doen.
-				}
+    // Toetsenbord: pijltjes om door de lijst te lopen, Enter om te
+    // kiezen, Escape om te sluiten — zelfde bediening als een native
+    // <select>, maar dan voor onze eigen voorstellenlijst.
+    input.addEventListener("keydown", function (e) {
+      if (listbox.hidden || !currentSuggestions.length) {
+        return;
+      }
 
-				categorieKnoppen.forEach( function ( andereKnop ) {
-					andereKnop.classList.remove( 'is-actief' );
-					andereKnop.setAttribute( 'aria-selected', 'false' );
-				} );
-				knop.classList.add( 'is-actief' );
-				knop.setAttribute( 'aria-selected', 'true' );
+      if ("ArrowDown" === e.key) {
+        e.preventDefault();
+        highlightOption(
+          Math.min(activeIndex + 1, currentSuggestions.length - 1),
+        );
+      } else if ("ArrowUp" === e.key) {
+        e.preventDefault();
+        highlightOption(Math.max(activeIndex - 1, 0));
+      } else if ("Enter" === e.key) {
+        if (activeIndex >= 0) {
+          e.preventDefault();
+          selectSuggestion(activeIndex);
+        }
+      } else if ("Escape" === e.key) {
+        closeListbox();
+      }
+    });
 
-				wrapper.setAttribute( 'data-taxonomy', knop.getAttribute( 'data-taxonomy' ) );
-				input.placeholder = knop.getAttribute( 'data-placeholder' ) || '';
+    // Klikken op een voorstel. We gebruiken "mousedown" (niet "click") en
+    // voorkomen het standaardgedrag, zodat het invoerveld zijn focus niet
+    // al kwijtraakt (en de lijst niet al dichtklapt) vóórdat de keuze is
+    // verwerkt.
+    listbox.addEventListener("mousedown", function (e) {
+      var option = e.target.closest(".fxr-combobox__option");
+      if (!option) {
+        return;
+      }
+      e.preventDefault();
+      selectSuggestion(parseInt(option.getAttribute("data-index"), 10));
+    });
 
-				input.value = '';
-				forgetSelection();
-				closeListbox();
-				input.focus();
-			} );
-		} );
-	}
+    // Ergens anders klikken sluit de voorstellenlijst.
+    document.addEventListener("click", function (e) {
+      if (!wrapper.contains(e.target)) {
+        closeListbox();
+      }
+    });
 
-	document.addEventListener( 'DOMContentLoaded', function () {
-		var wrappers = document.querySelectorAll( '.fxr-zoeker' );
+    // Categorieknoppen (alleen aanwezig bij de gecombineerde zoeker
+    // [fixxar_zoeker]): wisselen zet de taxonomie om, ververst het
+    // zoekveld en wist de oude resultaten — je begint dus telkens
+    // schoon in de nieuw gekozen categorie.
+    categorieKnoppen.forEach(function (knop) {
+      knop.addEventListener("click", function () {
+        if (knop.classList.contains("is-actief")) {
+          return; // Al de actieve categorie, niks te doen.
+        }
 
-		wrappers.forEach( function ( wrapper ) {
-			if ( 'autocomplete' === wrapper.getAttribute( 'data-mode' ) ) {
-				initAutocompleteZoeker( wrapper );
-			} else {
-				initDropdownZoeker( wrapper );
-			}
-		} );
-	} );
-} )();
+        categorieKnoppen.forEach(function (andereKnop) {
+          andereKnop.classList.remove("is-actief");
+          andereKnop.setAttribute("aria-selected", "false");
+        });
+        knop.classList.add("is-actief");
+        knop.setAttribute("aria-selected", "true");
+
+        wrapper.setAttribute(
+          "data-taxonomy",
+          knop.getAttribute("data-taxonomy"),
+        );
+        input.placeholder = knop.getAttribute("data-placeholder") || "";
+
+        input.value = "";
+        forgetSelection();
+        closeListbox();
+        input.focus();
+      });
+    });
+  }
+
+  document.addEventListener("DOMContentLoaded", function () {
+    var wrappers = document.querySelectorAll(".fxr-zoeker");
+
+    wrappers.forEach(function (wrapper) {
+      if ("autocomplete" === wrapper.getAttribute("data-mode")) {
+        initAutocompleteZoeker(wrapper);
+      } else {
+        initDropdownZoeker(wrapper);
+      }
+    });
+  });
+})();
