@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Fixxar Onderdelen Zoeker
  * Description: Twee zoeksystemen (inkt en stofzuigeronderdelen) waarmee bezoekers het juiste onderdeel vinden. Beide via één zoekveld met autocomplete over alle Merk/Serie/Model-combinaties, dat pas resultaten toont zodra een voorstel is gekozen. Shortcodes: [fixxar_inkt_zoeker] en [fixxar_stofzuiger_zoeker].
- * Version: 2.5.0
+ * Version: 2.6.0
  * Author: Fixxar Nederland
  * Text Domain: fixxar-zoeker
  */
@@ -11,7 +11,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Direct toegang niet toegestaan.
 }
 
-define( 'FXR_ZOEKER_VERSION', '2.5.0' );
+define( 'FXR_ZOEKER_VERSION', '2.6.0' );
 define( 'FXR_ZOEKER_PATH', plugin_dir_path( __FILE__ ) );
 define( 'FXR_ZOEKER_URL', plugin_dir_url( __FILE__ ) );
 
@@ -23,8 +23,8 @@ define( 'FXR_ZOEKER_URL', plugin_dir_url( __FILE__ ) );
  * plugin — net als bij een plugin uit de WordPress.org-directory.
  *
  * Nieuwe versie uitbrengen: versienummer hierboven + bij FXR_ZOEKER_VERSION
- * ophogen, committen, taggen (bv. "git tag v2.5.0") en naar GitHub pushen
- * (ook de tag: "git push origin v2.5.0"). Zonder tag op GitHub heeft deze
+ * ophogen, committen, taggen (bv. "git tag v2.6.0") en naar GitHub pushen
+ * (ook de tag: "git push origin v2.6.0"). Zonder tag op GitHub heeft deze
  * update-checker niets om mee te vergelijken en verschijnt er nooit een
  * update-melding, ook niet als dit stuk code zelf goed staat.
  */
@@ -36,6 +36,9 @@ $fxr_update_checker = YahnisElsts\PluginUpdateChecker\v5\PucFactory::buildUpdate
 	'fixxar-onderdelen-zoeker'
 );
 $fxr_update_checker->setBranch( 'main' );
+
+// UX Builder-element "Onderdelenzoeker" (alleen actief met Flatsome).
+require_once FXR_ZOEKER_PATH . 'inc/ux-builder.php';
 
 /**
  * De twee taxonomieën, allebei hiërarchisch (zoals Categorieën):
@@ -118,84 +121,245 @@ function fxr_render_stofzuiger_shortcode( $atts ) {
  * wist het zoekveld en de resultaten, en zoekt daarna in de bijbehorende
  * taxonomie (zie fxr-zoeker.js).
  *
- * Attributen:
- * - title      : titel boven de zoeker (default "Zoek je onderdeel").
- * - categorie  : welke knop bij het laden actief is, "inkt" of "stofzuiger"
- *                (default "inkt").
+ * Attributen (allemaal ook in te stellen via het UX Builder-element
+ * "Onderdelenzoeker", zie fxr_register_ux_builder_element()):
+ * - eyebrow, title, title_tag : klein tekstje, titel en de kop-tag (h1–h4).
+ * - categorieen : welke categorieën, "inkt,stofzuiger" (default), "inkt" of
+ *                 "stofzuiger". Met één categorie verschijnen er geen knoppen.
+ * - categorie   : welke knop bij het laden actief is (default "inkt").
+ * - label_inkt / label_stofzuiger, placeholder_inkt / placeholder_stofzuiger.
+ * - min_chars   : aantal tekens voordat er voorstellen komen.
+ * - plus de vormgevingsattributen uit fxr_design_defaults().
  *
  * De losse shortcodes [fixxar_inkt_zoeker] en [fixxar_stofzuiger_zoeker]
- * blijven gewoon bestaan en werken — gebruik deze nieuwe shortcode in
- * plaats daarvan op de plek(ken) waar je nu twee aparte zoekbalken hebt
- * staan.
+ * blijven gewoon bestaan en werken.
  */
 add_shortcode( 'fixxar_zoeker', 'fxr_render_gecombineerde_shortcode' );
 function fxr_render_gecombineerde_shortcode( $atts ) {
-	$categorie_config = array(
-		'inkt'       => array(
-			'taxonomy'    => 'fxr_inkt_model',
-			'label'       => 'Inkt',
-			'placeholder' => 'Bijv. HP, Deskjet, 2720...',
-		),
-		'stofzuiger' => array(
-			'taxonomy'    => 'fxr_stofzuiger_model',
-			'label'       => 'Stofzuigers',
-			'placeholder' => 'Bijv. Miele, S241i, GD1000...',
-		),
-	);
-
 	$atts = shortcode_atts(
-		array(
-			'eyebrow'   => 'Fixxar Zoekmachine', // Optioneel: klein tekstje boven de titel, bv. "Vind je onderdeel".
-			'title'     => 'Eén zoekmachine voor alle inktcartridges en stofzuigerzakken',
-			'categorie' => 'inkt',
-			'min_chars' => 2,
+		array_merge(
+			array(
+				'eyebrow'                => 'Fixxar Zoekmachine', // Optioneel: klein tekstje boven de titel.
+				'title'                  => 'Eén zoekmachine voor alle inktcartridges en stofzuigerzakken',
+				'title_tag'              => 'h2',
+				'categorieen'            => 'inkt,stofzuiger',
+				'categorie'              => 'inkt',
+				'label_inkt'             => 'Inkt',
+				'label_stofzuiger'       => 'Stofzuigers',
+				'placeholder_inkt'       => 'Bijv. HP, Deskjet, 2720...',
+				'placeholder_stofzuiger' => 'Bijv. Miele, S241i, GD1000...',
+				'min_chars'              => 2,
+			),
+			fxr_design_defaults()
 		),
 		$atts,
 		'fixxar_zoeker'
 	);
 
-	$actief = isset( $categorie_config[ $atts['categorie'] ] ) ? $atts['categorie'] : 'inkt';
+	$categorie_config = array(
+		'inkt'       => array(
+			'taxonomy'    => 'fxr_inkt_model',
+			'label'       => $atts['label_inkt'],
+			'placeholder' => $atts['placeholder_inkt'],
+		),
+		'stofzuiger' => array(
+			'taxonomy'    => 'fxr_stofzuiger_model',
+			'label'       => $atts['label_stofzuiger'],
+			'placeholder' => $atts['placeholder_stofzuiger'],
+		),
+	);
 
-	$categorieen = array();
-	foreach ( $categorie_config as $key => $cat ) {
-		$cat['actief']  = ( $key === $actief );
-		$categorieen[] = $cat;
+	// Alleen de gekozen categorieën tonen; ongeldige invoer = allemaal.
+	$gekozen = array_intersect_key(
+		$categorie_config,
+		array_flip( array_map( 'trim', explode( ',', strtolower( $atts['categorieen'] ) ) ) )
+	);
+	if ( $gekozen ) {
+		$categorie_config = $gekozen;
 	}
 
-	wp_enqueue_style( 'fxr-zoeker', FXR_ZOEKER_URL . 'assets/css/fxr-zoeker.css', array(), FXR_ZOEKER_VERSION );
-	wp_enqueue_script( 'fxr-zoeker', FXR_ZOEKER_URL . 'assets/js/fxr-zoeker.js', array(), FXR_ZOEKER_VERSION, true );
-	wp_localize_script(
-		'fxr-zoeker',
-		'fxrZoeker',
-		array(
-			'ajaxUrl' => admin_url( 'admin-ajax.php' ),
-			'nonce'   => wp_create_nonce( 'fxr_zoeker_nonce' ),
-		)
-	);
+	$actief = isset( $categorie_config[ $atts['categorie'] ] ) ? $atts['categorie'] : key( $categorie_config );
 
-	static $instance = 0;
-	++$instance;
-	$uid = 'gecombineerd-' . $instance;
+	// Knoppen alleen bij meer dan één categorie; anders is het gewoon een
+	// losse zoeker voor die ene categorie.
+	$categorieen = null;
+	if ( count( $categorie_config ) > 1 ) {
+		$categorieen = array();
+		foreach ( $categorie_config as $key => $cat ) {
+			$cat['actief'] = ( $key === $actief );
+			$categorieen[] = $cat;
+		}
+	}
 
-	$render_atts = array(
-		'eyebrow'   => $atts['eyebrow'],
-		'title'       => $atts['title'],
-		'min_chars'   => $atts['min_chars'],
-		'placeholder' => $categorie_config[ $actief ]['placeholder'],
-	);
+	fxr_enqueue_assets();
+
+	$atts['placeholder'] = $categorie_config[ $actief ]['placeholder'];
 
 	ob_start();
-	fxr_render_autocomplete_markup( $render_atts, $categorie_config[ $actief ]['taxonomy'], $uid, 'autocomplete', $categorieen );
+	fxr_render_autocomplete_markup( $atts, $categorie_config[ $actief ]['taxonomy'], wp_unique_id( 'gecombineerd-' ), 'autocomplete', $categorieen );
 	return ob_get_clean();
 }
 
+/**
+ * Vormgevingsattributen, gedeeld door alle shortcodes. Leeg = volg het
+ * thema / de standaard uit fxr-zoeker.css.
+ * - stijl      : "gevuld" (accentkleur als achtergrond), "kaart" (witte kaart
+ *                met rand) of "transparant" (geen eigen achtergrond).
+ * - kleur      : accentkleur; leeg = primaire kleur van het thema.
+ * - tekstkleur : "licht", "donker" of leeg (= automatisch: licht bij
+ *                "gevuld", anders de tekstkleur van het thema).
+ * - uitlijning : "left" of "center".
+ * - breedte    : max. breedte van titel/knoppen/zoekveld (bv. 680 of 680px).
+ * - padding    : binnenruimte van de zoeker.
+ * - afronding  : hoekafronding van zoekveld, lijst, kaarten en de zoeker.
+ * - class, visibility : zoals bij de standaard Flatsome-elementen.
+ */
+function fxr_design_defaults() {
+	return array(
+		'stijl'      => 'gevuld',
+		'kleur'      => '',
+		'tekstkleur' => '',
+		'uitlijning' => 'left',
+		'breedte'    => '',
+		'padding'    => '',
+		'afronding'  => '',
+		'class'      => '',
+		'visibility' => '',
+	);
+}
+
+/**
+ * Bouwt de class- en style-attributen van de wrapper uit de
+ * vormgevingsattributen. Alles gaat via CSS-variabelen (--fxr-accent,
+ * --fxr-radius, ...), zodat fxr-zoeker.css de rest regelt.
+ */
+function fxr_wrapper_attributes( $atts, $modifier_class ) {
+	$atts  = wp_parse_args( $atts, fxr_design_defaults() );
+	$stijl = in_array( $atts['stijl'], array( 'gevuld', 'kaart', 'transparant' ), true ) ? $atts['stijl'] : 'gevuld';
+
+	$tekstkleur = $atts['tekstkleur'];
+	if ( ! in_array( $tekstkleur, array( 'licht', 'donker' ), true ) ) {
+		$tekstkleur = 'gevuld' === $stijl ? 'licht' : '';
+	}
+
+	$classes = array( 'fxr-zoeker', $modifier_class, 'fxr-zoeker--stijl-' . $stijl );
+	if ( $tekstkleur ) {
+		$classes[] = 'fxr-zoeker--tekst-' . $tekstkleur;
+	}
+	if ( 'center' === $atts['uitlijning'] ) {
+		$classes[] = 'fxr-zoeker--center';
+	}
+	foreach ( preg_split( '/\s+/', $atts['class'] . ' ' . $atts['visibility'] ) as $extra ) {
+		if ( '' !== $extra ) {
+			$classes[] = sanitize_html_class( $extra );
+		}
+	}
+
+	$vars  = array();
+	$kleur = fxr_sanitize_css_color( $atts['kleur'] );
+	if ( $kleur ) {
+		$vars['--fxr-accent'] = $kleur;
+	}
+	$maten = array(
+		'breedte'   => '--fxr-content-width',
+		'padding'   => '--fxr-padding',
+		'afronding' => array( '--fxr-radius', '--fxr-wrapper-radius' ),
+	);
+	foreach ( $maten as $attr => $props ) {
+		$waarde = fxr_sanitize_css_length( $atts[ $attr ] );
+		if ( '' === $waarde ) {
+			continue;
+		}
+		foreach ( (array) $props as $prop ) {
+			$vars[ $prop ] = $waarde;
+		}
+	}
+
+	$style = '';
+	foreach ( $vars as $prop => $waarde ) {
+		$style .= $prop . ':' . $waarde . ';';
+	}
+
+	return array(
+		'class' => implode( ' ', array_filter( $classes ) ),
+		'style' => $style,
+	);
+}
+
+/**
+ * Helper: alleen echte kleurwaarden doorlaten (hex, rgb(a), hsl(a)) — zo kan
+ * er via een shortcode-attribuut geen willekeurige CSS in style="" belanden.
+ */
+function fxr_sanitize_css_color( $kleur ) {
+	$kleur = trim( (string) $kleur );
+	if ( preg_match( '/^#[0-9a-f]{3,8}$/i', $kleur ) || preg_match( '/^(rgba?|hsla?)\(\s*[\d.\s,%deg\/]+\)$/i', $kleur ) ) {
+		return $kleur;
+	}
+	return '';
+}
+
+/**
+ * Helper: een maat ("20", "20px", "1.5rem", "60%") veilig maken; een kaal
+ * getal (zoals de UX Builder-sliders opslaan) wordt px.
+ */
+function fxr_sanitize_css_length( $waarde ) {
+	$waarde = strtolower( trim( (string) $waarde ) );
+	if ( ! preg_match( '/^(\d+(?:\.\d+)?)(px|rem|em|%|vw)?$/', $waarde, $m ) ) {
+		return '';
+	}
+	return $m[1] . ( isset( $m[2] ) && '' !== $m[2] ? $m[2] : 'px' );
+}
+
+/**
+ * Helper: alleen kop-tags (en p/div) toestaan voor de titel.
+ */
+function fxr_title_tag( $atts ) {
+	$tag = isset( $atts['title_tag'] ) ? strtolower( $atts['title_tag'] ) : 'h2';
+	return in_array( $tag, array( 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'div' ), true ) ? $tag : 'h2';
+}
+
+/**
+ * CSS + JS van de zoeker laden. Wordt aangeroepen door de shortcodes zelf,
+ * en in de UX Builder-preview altijd (zie hieronder), omdat UX Builder een
+ * nieuw toegevoegd element via AJAX rendert — dan is het te laat om vanuit
+ * de shortcode nog iets in de <head> of footer te zetten.
+ */
+function fxr_enqueue_assets() {
+	wp_enqueue_style( 'fxr-zoeker', FXR_ZOEKER_URL . 'assets/css/fxr-zoeker.css', array(), FXR_ZOEKER_VERSION );
+	wp_enqueue_script( 'fxr-zoeker', FXR_ZOEKER_URL . 'assets/js/fxr-zoeker.js', array(), FXR_ZOEKER_VERSION, true );
+	if ( ! wp_scripts()->get_data( 'fxr-zoeker', 'data' ) ) { // Eén keer is genoeg, ook bij meerdere zoekers.
+		wp_localize_script(
+			'fxr-zoeker',
+			'fxrZoeker',
+			array(
+				'ajaxUrl' => admin_url( 'admin-ajax.php' ),
+				'nonce'   => wp_create_nonce( 'fxr_zoeker_nonce' ),
+			)
+		);
+	}
+}
+
+add_action(
+	'ux_builder_enqueue_scripts',
+	function ( $context ) {
+		if ( 'content' === $context ) {
+			fxr_enqueue_assets();
+		}
+	}
+);
+
 function fxr_render_zoeker_shortcode( $atts, $taxonomy, $default_title, $default_mode, $default_placeholder = '' ) {
 	$atts = shortcode_atts(
-		array(
-			'title'       => $default_title,
-			'mode'        => $default_mode, // "dropdown" of "autocomplete".
-			'min_chars'   => 'autocomplete' === $default_mode ? 2 : 1,
-			'placeholder' => $default_placeholder, // Alleen gebruikt in mode "autocomplete".
+		array_merge(
+			array(
+				'eyebrow'     => '',
+				'title'       => $default_title,
+				'title_tag'   => 'h2',
+				'mode'        => $default_mode, // "dropdown" of "autocomplete".
+				'min_chars'   => 'autocomplete' === $default_mode ? 2 : 1,
+				'placeholder' => $default_placeholder, // Alleen gebruikt in mode "autocomplete".
+			),
+			fxr_design_defaults()
 		),
 		$atts,
 		'fixxar_zoeker'
@@ -203,22 +367,11 @@ function fxr_render_zoeker_shortcode( $atts, $taxonomy, $default_title, $default
 
 	$mode = in_array( $atts['mode'], array( 'dropdown', 'autocomplete' ), true ) ? $atts['mode'] : $default_mode;
 
-	wp_enqueue_style( 'fxr-zoeker', FXR_ZOEKER_URL . 'assets/css/fxr-zoeker.css', array(), FXR_ZOEKER_VERSION );
-	wp_enqueue_script( 'fxr-zoeker', FXR_ZOEKER_URL . 'assets/js/fxr-zoeker.js', array(), FXR_ZOEKER_VERSION, true );
-	wp_localize_script(
-		'fxr-zoeker',
-		'fxrZoeker',
-		array(
-			'ajaxUrl' => admin_url( 'admin-ajax.php' ),
-			'nonce'   => wp_create_nonce( 'fxr_zoeker_nonce' ),
-		)
-	);
+	fxr_enqueue_assets();
 
 	// Unieke id-suffix zodat twee zoekers (bv. inkt + stofzuiger) op dezelfde
 	// pagina elkaars id's/labels niet overschrijven.
-	static $instance = 0;
-	++$instance;
-	$uid = $taxonomy . '-' . $instance;
+	$uid = wp_unique_id( $taxonomy . '-' );
 
 	ob_start();
 
@@ -247,11 +400,17 @@ function fxr_render_dropdown_markup( $atts, $taxonomy, $uid, $mode ) {
 	if ( is_wp_error( $merken ) ) {
 		$merken = array();
 	}
+	$wrapper = fxr_wrapper_attributes( $atts, 'fxr-zoeker--' . fxr_taxonomy_css_slug( $taxonomy ) );
+	$tag     = fxr_title_tag( $atts );
 	?>
-	<div class="fxr-zoeker fxr-zoeker--<?php echo esc_attr( fxr_taxonomy_css_slug( $taxonomy ) ); ?>" data-taxonomy="<?php echo esc_attr( $taxonomy ); ?>" data-mode="<?php echo esc_attr( $mode ); ?>" data-min-chars="<?php echo esc_attr( $atts['min_chars'] ); ?>">
+	<div class="<?php echo esc_attr( $wrapper['class'] ); ?>" style="<?php echo esc_attr( $wrapper['style'] ); ?>" data-taxonomy="<?php echo esc_attr( $taxonomy ); ?>" data-mode="<?php echo esc_attr( $mode ); ?>" data-min-chars="<?php echo esc_attr( $atts['min_chars'] ); ?>">
+		<?php if ( ! empty( $atts['eyebrow'] ) ) : ?>
+			<p class="fxr-zoeker__eyebrow"><?php echo esc_html( $atts['eyebrow'] ); ?></p>
+		<?php endif; ?>
+
 		<?php if ( ! empty( $atts['title'] ) ) : ?>
-			<!-- Gewone <h2>: krijgt automatisch de kopstijl van je thema. -->
-			<h2 class="fxr-zoeker__title"><?php echo esc_html( $atts['title'] ); ?></h2>
+			<!-- Gewone kop-tag: krijgt automatisch de kopstijl van je thema. -->
+			<<?php echo $tag; // phpcs:ignore -- whitelisted in fxr_title_tag(). ?> class="fxr-zoeker__title"><?php echo esc_html( $atts['title'] ); ?></<?php echo $tag; // phpcs:ignore ?>>
 		<?php endif; ?>
 
 		<div class="fxr-zoeker__row">
@@ -302,15 +461,17 @@ function fxr_render_dropdown_markup( $atts, $taxonomy, $uid, $mode ) {
  * verschijnen er geen knoppen.
  */
 function fxr_render_autocomplete_markup( $atts, $taxonomy, $uid, $mode, $categorieen = null ) {
-	$wrapper_class = $categorieen ? 'fxr-zoeker--gecombineerd' : 'fxr-zoeker--' . fxr_taxonomy_css_slug( $taxonomy );
+	$wrapper = fxr_wrapper_attributes( $atts, $categorieen ? 'fxr-zoeker--gecombineerd' : 'fxr-zoeker--' . fxr_taxonomy_css_slug( $taxonomy ) );
+	$tag     = fxr_title_tag( $atts );
 	?>
-	<div class="fxr-zoeker <?php echo esc_attr( $wrapper_class ); ?>" data-taxonomy="<?php echo esc_attr( $taxonomy ); ?>" data-mode="<?php echo esc_attr( $mode ); ?>" data-min-chars="<?php echo esc_attr( $atts['min_chars'] ); ?>">
+	<div class="<?php echo esc_attr( $wrapper['class'] ); ?>" style="<?php echo esc_attr( $wrapper['style'] ); ?>" data-taxonomy="<?php echo esc_attr( $taxonomy ); ?>" data-mode="<?php echo esc_attr( $mode ); ?>" data-min-chars="<?php echo esc_attr( $atts['min_chars'] ); ?>">
 		<?php if ( ! empty( $atts['eyebrow'] ) ) : ?>
 			<p class="fxr-zoeker__eyebrow"><?php echo esc_html( $atts['eyebrow'] ); ?></p>
 		<?php endif; ?>
 
 		<?php if ( ! empty( $atts['title'] ) ) : ?>
-			<h2 class="fxr-zoeker__title"><?php echo esc_html( $atts['title'] ); ?></h2>
+			<!-- Gewone kop-tag: krijgt automatisch de kopstijl van je thema. -->
+			<<?php echo $tag; // phpcs:ignore -- whitelisted in fxr_title_tag(). ?> class="fxr-zoeker__title"><?php echo esc_html( $atts['title'] ); ?></<?php echo $tag; // phpcs:ignore ?>>
 		<?php endif; ?>
 
 		<?php if ( $categorieen ) : ?>
